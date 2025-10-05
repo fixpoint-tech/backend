@@ -1,0 +1,22 @@
+{
+  "testEnvironment": "node",
+  "transform": {},
+  "testMatch": [
+    "**/__tests__/**/*.js",
+    "**/?(*.)+(spec|test).js"
+  ],
+  "collectCoverageFrom": [
+    "src/**/*.js",
+    "server.js",
+    "!src/**/*.test.js",
+    "!src/**/*.spec.js",
+    "!src/config/minio.js"
+  ],
+  "coverageDirectory": "coverage",
+  "coverageReporters": [
+    "text",
+    "lcov",
+    "html"
+  ],
+  "testTimeout": 30000
+}
