@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ dev, main ]
+  push:
+    branches: [ dev, main, test/* ]  # Added test/* for testing CI
+
+env:
+  # Test environment variables
+  POSTGRES_USER: testuser
+  POSTGRES_DB: testdb
+  POSTGRES_PASSWORD: testpassword
+  POSTGRES_PORT: 5432
+  MINIO_ROOT_USER: testminio
+  MINIO_ROOT_PASSWORD: testminio123
+  MINIO_PORT: 9000
+  MINIO_CONSOLE_PORT: 9001
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_DB: testdb
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create .env file for testing
+      run: |
+        cat << EOF > .env
+        POSTGRES_USER=testuser
+        POSTGRES_DB=testdb
+        POSTGRES_PASSWORD=testpassword
+        POSTGRES_PORT=5432
+        DATABASE_URL=postgresql://testuser:testpassword@localhost:5432/testdb
+        MINIO_ROOT_USER=testminio
+        MINIO_ROOT_PASSWORD=testminio123
+        MINIO_PORT=9000
+        MINIO_CONSOLE_PORT=9001
+        MINIO_ENDPOINT=localhost
+        MINIO_ACCESS_KEY=testminio
+        MINIO_SECRET_KEY=testminio123
+        EOF
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
+
+    - name: Start MinIO manually
+      run: |
+        echo "Starting MinIO container manually..."
+        docker run -d \
+          --name minio-server \
+          -p 9000:9000 \
+          -p 9001:9001 \
+          -e MINIO_ROOT_USER=testminio \
+          -e MINIO_ROOT_PASSWORD=testminio123 \
+          minio/minio server /data --console-address ":9001"
+        
+        echo "Waiting for MinIO to be ready..."
+        for i in {1..30}; do
+          if curl -f http://localhost:9000/minio/health/live 2>/dev/null; then
+            echo "MinIO is ready!"
+            break
+          fi
+          echo "MinIO is starting... (attempt $i/30)"
+          sleep 3
+        done
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        echo "Waiting for PostgreSQL..."
+        until pg_isready -h localhost -p 5432 -U testuser; do
+          echo "PostgreSQL is unavailable - sleeping"
+          sleep 2
+        done
+        echo "PostgreSQL is ready!"
+
+    - name: Comprehensive container communication test
+      run: |
+        echo "🧪 Running comprehensive container communication test..."
+        NODE_OPTIONS='--experimental-vm-modules' node verify-container-communication.js
+
+    - name: Run linter (if available)
+      run: npm run lint --if-present
+
+    - name: Test individual components
+      run: |
+        echo "Testing Jest configuration..."
+        npx jest --version
+        
+        echo "Testing if test files exist..."
+        ls -la src/__tests__/
+        
+        
+    - name: Run all tests
+      run: |
+        echo "Running all tests without coverage..."
+        NODE_OPTIONS='--experimental-vm-modules' npm test -- --verbose --runInBand --no-cache --no-coverage
+
+    - name: Check test coverage (disabled due to ES modules issues)
+      run: echo "Coverage collection disabled for now due to ES modules compatibility issues"
+
+    - name: Cleanup MinIO container
+      if: always()
+      run: |
+        echo "Cleaning up MinIO container..."
+        docker stop minio-server || true
+        docker rm minio-server || true
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build --if-present
+
+    - name: Check for security vulnerabilities
+      run: npm audit --audit-level high
