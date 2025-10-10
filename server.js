@@ -1,9 +1,16 @@
 import 'dotenv/config';
 import express from 'express';
+import http from "http";
 import { initializeDatabase, initializeStorage } from './src/services/connectionService.js';
 import healthRoutes from './src/routes/health.js';
+import { setupSocket } from './src/socket/socket.js';
 
 const app = express();
+const server = http.createServer(app);
+
+
+//Socket.io
+setupSocket(server);
 
 // Routes
 app.use('/api/health', healthRoutes);
@@ -33,7 +40,7 @@ async function startServer() {
     await initializeStorage();
     
     // Start the server
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Server URL: http://localhost:${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);
