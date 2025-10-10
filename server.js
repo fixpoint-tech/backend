@@ -4,6 +4,7 @@ import http from "http";
 import { initializeDatabase, initializeStorage } from './src/services/connectionService.js';
 import healthRoutes from './src/routes/health.js';
 import { setupSocket } from './src/socket/socket.js';
+import issueRoutes from './src/routes/issues.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -12,8 +13,14 @@ const server = http.createServer(app);
 //Socket.io
 setupSocket(server);
 
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Routes
 app.use('/api/health', healthRoutes);
+
+app.use('/api/v1/issues', issueRoutes);
 
 // Basic route
 app.get('/api/', (req, res) => {
