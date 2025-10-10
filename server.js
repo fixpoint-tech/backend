@@ -2,11 +2,17 @@ import 'dotenv/config';
 import express from 'express';
 import { initializeDatabase, initializeStorage } from './src/services/connectionService.js';
 import healthRoutes from './src/routes/health.js';
+import userRoutes from './src/routes/users.js';
 
 const app = express();
 
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/users', userRoutes);
 
 // Basic route
 app.get('/api/', (req, res) => {
