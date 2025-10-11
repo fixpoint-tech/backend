@@ -120,7 +120,12 @@ jobs:
         
         echo "Testing if test files exist..."
         ls -la src/__tests__/
-        
+    
+    - name: Run database migrations
+      run: |
+        echo "Running database migrations..."
+        NODE_ENV=test npx sequelize-cli db:migrate
+        echo "Migrations completed!"
         
     - name: Run all tests
       run: |
