@@ -1,7 +1,4 @@
-import { 
-  testDatabaseConnection, 
-  checkMinioConnection 
-} from '../services/connectionService.js';
+import { testDatabaseConnection, checkMinioConnection } from '../services/connectionService.js';
 
 /**
  * Overall health check - tests all services
@@ -9,16 +6,16 @@ import {
 export const getOverallHealth = async (req, res) => {
   try {
     const startTime = Date.now();
-    
+
     // Check database connection
     const dbHealth = await testDatabaseConnection();
-    
+
     // Check MinIO connection
     const storageHealth = await checkMinioConnection();
-    
+
     const responseTime = Date.now() - startTime;
     const isHealthy = dbHealth.connected && storageHealth.connected;
-    
+
     const healthStatus = {
       status: isHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
@@ -43,7 +40,7 @@ export const getOverallHealth = async (req, res) => {
         }
       }
     };
-    
+
     res.status(isHealthy ? 200 : 503).json(healthStatus);
   } catch (error) {
     res.status(500).json({
@@ -63,7 +60,7 @@ export const getDatabaseHealth = async (req, res) => {
     const startTime = Date.now();
     const dbHealth = await testDatabaseConnection();
     const responseTime = Date.now() - startTime;
-    
+
     const response = {
       service: 'database',
       status: dbHealth.connected ? 'healthy' : 'unhealthy',
@@ -77,7 +74,7 @@ export const getDatabaseHealth = async (req, res) => {
         database: process.env.POSTGRES_DB
       }
     };
-    
+
     res.status(dbHealth.connected ? 200 : 503).json(response);
   } catch (error) {
     res.status(500).json({
@@ -98,7 +95,7 @@ export const getStorageHealth = async (req, res) => {
     const startTime = Date.now();
     const storageHealth = await checkMinioConnection();
     const responseTime = Date.now() - startTime;
-    
+
     const response = {
       service: 'storage',
       status: storageHealth.connected ? 'healthy' : 'unhealthy',
@@ -112,7 +109,7 @@ export const getStorageHealth = async (req, res) => {
         consolePort: process.env.MINIO_CONSOLE_PORT || 9001
       }
     };
-    
+
     res.status(storageHealth.connected ? 200 : 503).json(response);
   } catch (error) {
     res.status(500).json({
@@ -132,9 +129,9 @@ export const getReadinessCheck = async (req, res) => {
   try {
     const dbHealth = await testDatabaseConnection();
     const storageHealth = await checkMinioConnection();
-    
+
     const isReady = dbHealth.connected && storageHealth.connected;
-    
+
     if (isReady) {
       res.status(200).json({
         status: 'ready',

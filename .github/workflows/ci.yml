@@ -120,7 +120,22 @@ jobs:
         
         echo "Testing if test files exist..."
         ls -la src/__tests__/
-        
+    
+    - name: Create test database
+      run: |
+        echo "Creating test database..."
+        PGPASSWORD=$POSTGRES_PASSWORD psql \
+          -h localhost \
+          -U $POSTGRES_USER \
+          -d $POSTGRES_DB \
+          -c "CREATE DATABASE ${POSTGRES_DB}_test;" || echo "Database may already exist"
+        echo "Test database ready!"
+    
+    - name: Run database migrations
+      run: |
+        echo "Running database migrations..."
+        NODE_ENV=test npx sequelize-cli db:migrate
+        echo "Migrations completed!"
         
     - name: Run all tests
       run: |
