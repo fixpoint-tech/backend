@@ -39,7 +39,7 @@ class IssueController {
   async getAllIssues(req, res) {
     try {
       const { branch_id, userid, search, limit, offset } = req.query;
-      
+
       const filters = {};
       if (branch_id) filters.branch_id = parseInt(branch_id);
       if (userid) filters.userid = parseInt(userid);
