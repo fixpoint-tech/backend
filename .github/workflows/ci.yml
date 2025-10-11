@@ -121,6 +121,12 @@ jobs:
         echo "Testing if test files exist..."
         ls -la src/__tests__/
     
+    - name: Create test database
+      run: |
+        echo "Creating test database..."
+        PGPASSWORD=testpassword psql -h localhost -U testuser -d testdb -c "CREATE DATABASE testdb_test;" || echo "Database may already exist"
+        echo "Test database ready!"
+    
     - name: Run database migrations
       run: |
         echo "Running database migrations..."
