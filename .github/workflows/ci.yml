@@ -124,7 +124,11 @@ jobs:
     - name: Create test database
       run: |
         echo "Creating test database..."
-        PGPASSWORD=testpassword psql -h localhost -U testuser -d testdb -c "CREATE DATABASE testdb_test;" || echo "Database may already exist"
+        PGPASSWORD=$POSTGRES_PASSWORD psql \
+          -h localhost \
+          -U $POSTGRES_USER \
+          -d $POSTGRES_DB \
+          -c "CREATE DATABASE ${POSTGRES_DB}_test;" || echo "Database may already exist"
         echo "Test database ready!"
     
     - name: Run database migrations
