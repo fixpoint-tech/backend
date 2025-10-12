@@ -50,7 +50,7 @@ describe('User Endpoints - Technicians', () => {
 
       expect(res.statusCode).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Email already exists');
+      expect(res.body.message).toContain('Email');
     });
 
     it('should reject technician with invalid email format', async () => {

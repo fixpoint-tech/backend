@@ -11,12 +11,30 @@ class BranchManagerController {
    */
   async createBranchManager(req, res) {
     try {
-      const branchManagerData = {
-        ...req.body,
+      // Extract user fields from request body
+      const { name, email, password, phone, profilePicture } = req.body;
+      
+      const userData = {
+        name,
+        email,
         role: 'branch_manager'
       };
+      
+      // Add optional user fields if provided
+      if (password !== undefined) userData.password = password;
+      if (phone !== undefined) userData.phone = phone;
+      if (profilePicture !== undefined) userData.profilePicture = profilePicture;
 
-      const branchManager = await userService.createUser(branchManagerData);
+      // Extract profile-specific fields (everything else)
+      const profileData = {};
+      const userFields = ['name', 'email', 'password', 'phone', 'profilePicture', 'role'];
+      Object.keys(req.body).forEach(key => {
+        if (!userFields.includes(key)) {
+          profileData[key] = req.body[key];
+        }
+      });
+
+      const branchManager = await userService.createUser(userData, profileData);
 
       res.status(201).json({
         success: true,
@@ -94,7 +112,14 @@ class BranchManagerController {
         });
       }
 
-      const updatedBranchManager = await userService.updateUser(req.params.id, req.body);
+      const { name, phone, profilePicture, ...profileData } = req.body;
+      
+      const userData = {};
+      if (name !== undefined) userData.name = name;
+      if (phone !== undefined) userData.phone = phone;
+      if (profilePicture !== undefined) userData.profilePicture = profilePicture;
+
+      const updatedBranchManager = await userService.updateUser(req.params.id, userData, profileData);
 
       res.status(200).json({
         success: true,

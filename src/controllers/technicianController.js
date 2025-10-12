@@ -11,12 +11,30 @@ class TechnicianController {
    */
   async createTechnician(req, res) {
     try {
-      const technicianData = {
-        ...req.body,
+      // Extract user fields from request body
+      const { name, email, password, phone, profilePicture } = req.body;
+      
+      const userData = {
+        name,
+        email,
         role: 'technician'
       };
+      
+      // Add optional user fields if provided
+      if (password !== undefined) userData.password = password;
+      if (phone !== undefined) userData.phone = phone;
+      if (profilePicture !== undefined) userData.profilePicture = profilePicture;
 
-      const technician = await userService.createUser(technicianData);
+      // Extract profile-specific fields (everything else)
+      const profileData = {};
+      const userFields = ['name', 'email', 'password', 'phone', 'profilePicture', 'role'];
+      Object.keys(req.body).forEach(key => {
+        if (!userFields.includes(key)) {
+          profileData[key] = req.body[key];
+        }
+      });
+
+      const technician = await userService.createUser(userData, profileData);
 
       res.status(201).json({
         success: true,
@@ -94,7 +112,14 @@ class TechnicianController {
         });
       }
 
-      const updatedTechnician = await userService.updateUser(req.params.id, req.body);
+      const { name, phone, profilePicture, ...profileData } = req.body;
+      
+      const userData = {};
+      if (name !== undefined) userData.name = name;
+      if (phone !== undefined) userData.phone = phone;
+      if (profilePicture !== undefined) userData.profilePicture = profilePicture;
+
+      const updatedTechnician = await userService.updateUser(req.params.id, userData, profileData);
 
       res.status(200).json({
         success: true,
