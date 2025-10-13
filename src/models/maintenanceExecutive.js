@@ -28,43 +28,11 @@ const MaintenanceExecutive = sequelize.define(
         }
       }
     },
-    department: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      comment: 'Department name (e.g., Operations, Facilities, Equipment)'
-    },
-    level: {
-      type: DataTypes.ENUM('executive', 'senior_executive', 'chief'),
-      allowNull: false,
-      defaultValue: 'executive',
-      comment: 'Executive hierarchy level'
-    },
     employeeId: {
       type: DataTypes.STRING(50),
       allowNull: true,
       unique: true,
       comment: 'Company employee ID'
-    },
-    responsibilities: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Key areas of responsibility'
-    },
-    authorityLevel: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 1,
-      validate: {
-        min: {
-          args: [1],
-          msg: 'Authority level must be at least 1'
-        },
-        max: {
-          args: [5],
-          msg: 'Authority level cannot exceed 5'
-        }
-      },
-      comment: 'Decision-making authority level (1-5)'
     }
   },
   {
@@ -78,17 +46,12 @@ const MaintenanceExecutive = sequelize.define(
       {
         unique: true,
         fields: ['employeeId']
-      },
-      {
-        fields: ['department']
-      },
-      {
-        fields: ['level']
-      },
-      {
-        fields: ['authorityLevel']
       }
-    ]
+    ],
+    // Remove userId from JSON responses to avoid duplication
+    defaultScope: {
+      attributes: { exclude: ['userId'] }
+    }
   }
 );
 

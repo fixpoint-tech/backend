@@ -43,11 +43,6 @@ const Technician = sequelize.define(
         }
       }
     },
-    certification: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      comment: 'Professional certifications'
-    },
     employeeId: {
       type: DataTypes.STRING(50),
       allowNull: true,
@@ -59,6 +54,11 @@ const Technician = sequelize.define(
       allowNull: false,
       defaultValue: true,
       comment: 'Availability status for task assignment'
+    },
+    location_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Location/area the technician covers'
     }
   },
   {
@@ -78,8 +78,15 @@ const Technician = sequelize.define(
       },
       {
         fields: ['isAvailable']
+      },
+      {
+        fields: ['location_id']
       }
-    ]
+    ],
+    // Remove userId from JSON responses to avoid duplication
+    defaultScope: {
+      attributes: { exclude: ['userId'] }
+    }
   }
 );
 

@@ -29,31 +29,15 @@ const BranchManager = sequelize.define(
       }
     },
     branchId: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.INTEGER,
       allowNull: true,
-      comment: 'Branch identifier code'
-    },
-    branchName: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      comment: 'Name of the branch managed'
-    },
-    region: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      comment: 'Geographic region (e.g., Western, Central, Southern)'
+      comment: 'Branch identifier - references Branch table'
     },
     employeeId: {
       type: DataTypes.STRING(50),
       allowNull: true,
       unique: true,
       comment: 'Company employee ID'
-    },
-    managementLevel: {
-      type: DataTypes.ENUM('junior', 'senior', 'regional'),
-      allowNull: false,
-      defaultValue: 'junior',
-      comment: 'Management hierarchy level'
     }
   },
   {
@@ -70,14 +54,12 @@ const BranchManager = sequelize.define(
       },
       {
         fields: ['branchId']
-      },
-      {
-        fields: ['region']
-      },
-      {
-        fields: ['managementLevel']
       }
-    ]
+    ],
+    // Remove userId from JSON responses to avoid duplication
+    defaultScope: {
+      attributes: { exclude: ['userId'] }
+    }
   }
 );
 

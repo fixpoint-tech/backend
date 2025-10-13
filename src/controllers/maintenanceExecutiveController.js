@@ -1,4 +1,5 @@
 import userService from '../services/userService.js';
+import { uploadProfilePicture } from '../services/uploadService.js';
 
 /**
  * Maintenance Executive Controller
@@ -11,8 +12,26 @@ class MaintenanceExecutiveController {
    */
   async createMaintenanceExecutive(req, res) {
     try {
+      // Handle file upload if present
+      let profilePictureUrl = req.body.profilePicture;
+      
+      if (req.file) {
+        try {
+          profilePictureUrl = await uploadProfilePicture(
+            req.file.buffer,
+            req.file.originalname,
+            req.file.mimetype
+          );
+        } catch (uploadError) {
+          return res.status(500).json({
+            success: false,
+            message: `File upload failed: ${uploadError.message}`
+          });
+        }
+      }
+
       // Extract user fields from request body
-      const { name, email, password, phone, profilePicture } = req.body;
+      const { name, email, password, phone } = req.body;
       
       const userData = {
         name,
@@ -23,7 +42,7 @@ class MaintenanceExecutiveController {
       // Add optional user fields if provided
       if (password !== undefined) userData.password = password;
       if (phone !== undefined) userData.phone = phone;
-      if (profilePicture !== undefined) userData.profilePicture = profilePicture;
+      if (profilePictureUrl !== undefined) userData.profilePicture = profilePictureUrl;
 
       // Extract profile-specific fields (everything else)
       const profileData = {};
@@ -112,12 +131,30 @@ class MaintenanceExecutiveController {
         });
       }
 
-      const { name, phone, profilePicture, ...profileData } = req.body;
+      // Handle file upload if present
+      let profilePictureUrl = req.body.profilePicture;
+      
+      if (req.file) {
+        try {
+          profilePictureUrl = await uploadProfilePicture(
+            req.file.buffer,
+            req.file.originalname,
+            req.file.mimetype
+          );
+        } catch (uploadError) {
+          return res.status(500).json({
+            success: false,
+            message: `File upload failed: ${uploadError.message}`
+          });
+        }
+      }
+
+      const { name, phone, ...profileData } = req.body;
       
       const userData = {};
       if (name !== undefined) userData.name = name;
       if (phone !== undefined) userData.phone = phone;
-      if (profilePicture !== undefined) userData.profilePicture = profilePicture;
+      if (profilePictureUrl !== undefined) userData.profilePicture = profilePictureUrl;
 
       const updatedExecutive = await userService.updateUser(req.params.id, userData, profileData);
 
