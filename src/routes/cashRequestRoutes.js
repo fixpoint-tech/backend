@@ -13,7 +13,8 @@ import {
     deleteCashRequest,
     approveCashRequest,
     rejectCashRequest,
-    getTechnicianStats
+    getTechnicianStats,
+    getCashRequestsByTicketId
 } from '../controllers/cashRequestController.js';
 
 const router = express.Router();
@@ -74,6 +75,15 @@ const updateCashRequestValidation = [
  * @query   {string} ticket_id - Optional: Filter by ticket
  */
 router.get('/', getAllCashRequests);
+
+/**
+ * @route   GET /api/v1/cash-requests/by-ticket
+ * @desc    Get cash requests filtered by ticket ID
+ * @access  Protected (TODO: Add JWT authentication middleware)
+ * @query   {string} ticket_id - Required: Ticket ID to filter cash requests
+ * @example GET /api/v1/cash-requests/by-ticket?ticket_id=123e4567-e89b-12d3-a456-426614174000
+ */
+router.get('/by-ticket', getCashRequestsByTicketId);
 
 /**
  * @route   GET /api/v1/cash-requests/stats/:technician_id

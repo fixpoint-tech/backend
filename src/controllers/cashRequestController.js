@@ -306,3 +306,37 @@ export const getTechnicianStats = async (req, res) => {
         });
     }
 };
+
+/**
+ * Get cash requests by ticket ID
+ * @route GET /api/v1/cash-requests?ticket_id=<issue_id>
+ * @query {string} ticket_id - Ticket ID to filter cash requests
+ */
+export const getCashRequestsByTicketId = async (req, res) => {
+    try {
+        const { ticket_id } = req.query;
+
+        if (!ticket_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'ticket_id query parameter is required'
+            });
+        }
+
+        const cashRequests = await CashRequestService.getAllCashRequests({ ticket_id });
+
+        res.status(200).json({
+            success: true,
+            message: 'Cash requests for ticket retrieved successfully',
+            count: cashRequests.length,
+            data: cashRequests
+        });
+    } catch (error) {
+        console.error('Error in getCashRequestsByTicketId:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Unable to retrieve cash requests for ticket',
+            error: error.message
+        });
+    }
+};

@@ -128,6 +128,24 @@ async function runTests() {
         console.log('❌ Failed to get approved requests:', getApprovedResult.data?.message || getApprovedResult.error);
     }
 
+    // Test 7.5: Get Cash Requests by Ticket ID
+    console.log('\n7.5️⃣  Getting cash requests by ticket ID...');
+    const getByTicketResult = await testRequest('GET', `${BASE_URL}/by-ticket?ticket_id=${sampleCashRequest.ticket_id}`);
+    if (getByTicketResult.data && getByTicketResult.data.success) {
+        console.log('✅ Retrieved', getByTicketResult.data.count, 'cash request(s) for ticket');
+    } else {
+        console.log('❌ Failed to get cash requests by ticket:', getByTicketResult.data?.message || getByTicketResult.error);
+    }
+
+    // Test 7.6: Get Cash Requests by Ticket ID (non-existent)
+    console.log('\n7.6️⃣  Testing filtering by non-existent ticket ID...');
+    const getByTicketEmptyResult = await testRequest('GET', `${BASE_URL}/by-ticket?ticket_id=99999999-9999-9999-9999-999999999999`);
+    if (getByTicketEmptyResult.data && getByTicketEmptyResult.data.success && getByTicketEmptyResult.data.count === 0) {
+        console.log('✅ Correctly returned empty results for non-existent ticket');
+    } else {
+        console.log('❌ Unexpected result for non-existent ticket:', getByTicketEmptyResult.data?.message || getByTicketEmptyResult.error);
+    }
+
     // Test 8: Get Technician Statistics
     console.log('\n8️⃣  Getting technician statistics...');
     const statsResult = await testRequest('GET', `${BASE_URL}/stats/${sampleCashRequest.technician_id}`);
@@ -169,28 +187,35 @@ async function runTests() {
     console.log('\n✨ Testing complete!\n');
 }
 
-// Jest test suite wrapper (prevents "no tests" error)
-describe('Cash Requests API - Integration Tests', () => {
-    test('manual integration test placeholder', () => {
-        // This placeholder prevents Jest from failing with "no tests found"
-        // To run actual integration tests, ensure server is running and execute:
-        // node src/__tests__/cash-requests.test.js
-        expect(true).toBe(true);
-    });
-});
-
-// Clean up resources to prevent Jest worker leak warnings
-afterAll(async () => {
-    // Close http(s) global agents to prevent open handles
-    try {
-        const http = await import('http');
-        const https = await import('https');
-        http.globalAgent?.destroy();
-        https.globalAgent?.destroy();
-    } catch (err) {
-        // Ignore errors during cleanup
-    }
-});
-
 // Export for manual testing
 export { runTests };
+
+// Run tests if this file is executed directly
+if (process.argv[1].includes('cash-requests.test.js')) {
+    runTests().catch(console.error);
+}
+
+// Jest test suite wrapper (only run when executed by Jest)
+if (typeof describe !== 'undefined') {
+    describe('Cash Requests API - Integration Tests', () => {
+        test('manual integration test placeholder', () => {
+            // This placeholder prevents Jest from failing with "no tests found"
+            // To run actual integration tests, ensure server is running and execute:
+            // node src/__tests__/cash-requests.test.js
+            expect(true).toBe(true);
+        });
+    });
+
+    // Clean up resources to prevent Jest worker leak warnings
+    afterAll(async () => {
+        // Close http(s) global agents to prevent open handles
+        try {
+            const http = await import('http');
+            const https = await import('https');
+            http.globalAgent?.destroy();
+            https.globalAgent?.destroy();
+        } catch (err) {
+            // Ignore errors during cleanup
+        }
+    });
+}
