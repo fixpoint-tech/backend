@@ -3,7 +3,7 @@
  * Business logic layer for petty cash requests
  */
 
-import * as CashRequestModel from '../models/cashRequestModel.js';
+import PettyCashRequest from '../models/pettyCashRequest.js';
 
 /**
  * Get all cash requests with optional filtering
@@ -12,8 +12,8 @@ import * as CashRequestModel from '../models/cashRequestModel.js';
  */
 export const getAllCashRequests = async (filters = {}) => {
     try {
-        const cashRequests = await CashRequestModel.getAllCashRequests(filters);
-        return cashRequests;
+        const cashRequests = await PettyCashRequest.getAllWithFilters(filters);
+        return cashRequests.map(req => req.toJSON());
     } catch (error) {
         throw new Error(`Service error in getAllCashRequests: ${error.message}`);
     }
@@ -26,8 +26,8 @@ export const getAllCashRequests = async (filters = {}) => {
  */
 export const getCashRequestById = async (id) => {
     try {
-        const cashRequest = await CashRequestModel.getCashRequestById(id);
-        return cashRequest;
+        const cashRequest = await PettyCashRequest.findByPk(id);
+        return cashRequest ? cashRequest.toJSON() : null;
     } catch (error) {
         throw new Error(`Service error in getCashRequestById: ${error.message}`);
     }
@@ -57,8 +57,8 @@ export const createCashRequest = async (cashRequestData) => {
             throw new Error('Description cannot be empty');
         }
 
-        const newCashRequest = await CashRequestModel.createCashRequest(cashRequestData);
-        return newCashRequest;
+        const newCashRequest = await PettyCashRequest.create(cashRequestData);
+        return newCashRequest.toJSON();
     } catch (error) {
         throw new Error(`Service error in createCashRequest: ${error.message}`);
     }
@@ -73,7 +73,7 @@ export const createCashRequest = async (cashRequestData) => {
 export const updateCashRequest = async (id, updateData) => {
     try {
         // Check if cash request exists
-        const existingRequest = await CashRequestModel.getCashRequestById(id);
+        const existingRequest = await PettyCashRequest.findByPk(id);
         if (!existingRequest) {
             return null;
         }
@@ -93,8 +93,9 @@ export const updateCashRequest = async (id, updateData) => {
             throw new Error('Description cannot be empty');
         }
 
-        const updatedCashRequest = await CashRequestModel.updateCashRequest(id, updateData);
-        return updatedCashRequest;
+        // Update the request
+        await existingRequest.update(updateData);
+        return existingRequest.toJSON();
     } catch (error) {
         throw new Error(`Service error in updateCashRequest: ${error.message}`);
     }
@@ -108,13 +109,13 @@ export const updateCashRequest = async (id, updateData) => {
 export const deleteCashRequest = async (id) => {
     try {
         // Check if cash request exists
-        const existingRequest = await CashRequestModel.getCashRequestById(id);
+        const existingRequest = await PettyCashRequest.findByPk(id);
         if (!existingRequest) {
             return false;
         }
 
-        const deleted = await CashRequestModel.deleteCashRequest(id);
-        return deleted;
+        await existingRequest.destroy();
+        return true;
     } catch (error) {
         throw new Error(`Service error in deleteCashRequest: ${error.message}`);
     }
@@ -127,7 +128,7 @@ export const deleteCashRequest = async (id) => {
  */
 export const approveCashRequest = async (id) => {
     try {
-        const cashRequest = await CashRequestModel.getCashRequestById(id);
+        const cashRequest = await PettyCashRequest.findByPk(id);
 
         if (!cashRequest) {
             return null;
@@ -138,8 +139,8 @@ export const approveCashRequest = async (id) => {
             throw new Error('Cash request is already approved');
         }
 
-        const updatedRequest = await CashRequestModel.updateCashRequestStatus(id, 'approved');
-        return updatedRequest;
+        const updatedRequest = await PettyCashRequest.updateStatus(id, 'approved');
+        return updatedRequest.toJSON();
     } catch (error) {
         throw new Error(`Service error in approveCashRequest: ${error.message}`);
     }
@@ -152,7 +153,7 @@ export const approveCashRequest = async (id) => {
  */
 export const rejectCashRequest = async (id) => {
     try {
-        const cashRequest = await CashRequestModel.getCashRequestById(id);
+        const cashRequest = await PettyCashRequest.findByPk(id);
 
         if (!cashRequest) {
             return null;
@@ -163,8 +164,8 @@ export const rejectCashRequest = async (id) => {
             throw new Error('Cash request is already rejected');
         }
 
-        const updatedRequest = await CashRequestModel.updateCashRequestStatus(id, 'rejected');
-        return updatedRequest;
+        const updatedRequest = await PettyCashRequest.updateStatus(id, 'rejected');
+        return updatedRequest.toJSON();
     } catch (error) {
         throw new Error(`Service error in rejectCashRequest: ${error.message}`);
     }
@@ -177,7 +178,7 @@ export const rejectCashRequest = async (id) => {
  */
 export const getTechnicianStats = async (technician_id) => {
     try {
-        const stats = await CashRequestModel.getCashRequestStatsByTechnician(technician_id);
+        const stats = await PettyCashRequest.getStatsByTechnician(technician_id);
         return stats;
     } catch (error) {
         throw new Error(`Service error in getTechnicianStats: ${error.message}`);
