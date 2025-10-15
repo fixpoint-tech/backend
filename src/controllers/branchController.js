@@ -4,7 +4,7 @@ class BranchController {
   // POST /api/v1/branches - Create a new branch
   async addBranch(req, res) {
     try {
-      const { name, location, manager_id, contactNumber } = req.body;
+      const { name, location, manager_id } = req.body; // Removed contactNumber
 
       // Validation
       if (!name || !location) {
@@ -17,8 +17,8 @@ class BranchController {
       const result = await branchService.addBranch({ 
         name, 
         location, 
-        manager_id, 
-        contactNumber 
+        manager_id
+        // contactNumber removed
       });
 
       if (result.success) {
@@ -79,14 +79,19 @@ class BranchController {
   async updateBranch(req, res) {
     try {
       const { id } = req.params;
-      const { name, location } = req.body;
+      const { name, location, manager_id } = req.body; // Removed contactNumber
 
-      const result = await branchService.updateBranch(parseInt(id), { name, location });
+      const result = await branchService.updateBranch(id, { 
+        name, 
+        location, 
+        manager_id
+        // contactNumber removed
+      });
 
       if (result.success) {
         return res.status(200).json(result);
       } else {
-        return res.status(400).json(result);
+        return res.status(404).json(result);
       }
     } catch (error) {
       return res.status(500).json({

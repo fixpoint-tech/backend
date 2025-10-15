@@ -23,10 +23,6 @@ const Branch = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    contactNumber: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
   },
   {
     tableName: 'branches',

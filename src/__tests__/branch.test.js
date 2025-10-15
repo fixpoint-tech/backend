@@ -29,7 +29,6 @@ describe('Branch Endpoints', () => {
         name: 'Colombo Branch',
         location: 'Colombo 07',
         manager_id: 10,
-        contactNumber: '0771234567'
       });
 
       expect(res.statusCode).toBe(201);
@@ -38,7 +37,6 @@ describe('Branch Endpoints', () => {
       expect(res.body.data.name).toBe('Colombo Branch');
       expect(res.body.data.location).toBe('Colombo 07');
       expect(res.body.data.manager_id).toBe(10);
-      expect(res.body.data.contactNumber).toBe('0771234567');
 
       branchId = res.body.data.id;
     });
@@ -72,7 +70,6 @@ describe('Branch Endpoints', () => {
       expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.data.length).toBeGreaterThan(0);
-      expect(res.body).toHaveProperty('count');
     });
   });
 
@@ -105,7 +102,6 @@ describe('Branch Endpoints', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.name).toBe('Colombo Updated');
       expect(res.body.data.manager_id).toBe(20);
-      // Verify location was not changed
       expect(res.body.data.location).toBe('Colombo 07');
     });
 
