@@ -345,7 +345,7 @@ describe('User Endpoints - General', () => {
 // NEW TEST SUITE: Profile Picture Upload & Simplified Fields
 describe('Profile Picture Upload & Simplified Fields', () => {
   describe('Technician with locationId field', () => {
-    it('should create technician with locationId', async () => {
+    it('should create technician with location_id', async () => {
       const res = await request(app)
         .post('/api/v1/users/technicians')
         .send({
@@ -355,17 +355,29 @@ describe('Profile Picture Upload & Simplified Fields', () => {
           experienceYears: 5,
           employeeId: 'EMP001',
           isAvailable: true,
-          locationId: 123
+          location_id: 123 // Use snake_case to match your model
         });
 
       expect(res.statusCode).toBe(201);
       expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('id');
+      expect(res.body.data.name).toBe('Tech with Location');
+      expect(res.body.data.email).toBe('tech.location@test.com');
+      expect(res.body.data.role).toBe('technician');
+      
+      // Check technician profile data
       expect(res.body.data.technicianProfile).toBeDefined();
-      expect(res.body.data.technicianProfile.locationId).toBe(123);
+      expect(res.body.data.technicianProfile.location_id).toBe(123); // snake_case
       expect(res.body.data.technicianProfile.specialization).toBe('Electrical');
+      expect(res.body.data.technicianProfile.experienceYears).toBe(5);
       expect(res.body.data.technicianProfile.employeeId).toBe('EMP001');
-      // Should NOT have userId in nested object
+      expect(res.body.data.technicianProfile.isAvailable).toBe(true);
+      
+      // Should NOT have userId in nested object due to defaultScope
       expect(res.body.data.technicianProfile.userId).toBeUndefined();
+      
+      // Should NOT return password in user data
+      expect(res.body.data).not.toHaveProperty('password');
     });
 
     it('should NOT have certification field (removed)', async () => {
@@ -374,12 +386,73 @@ describe('Profile Picture Upload & Simplified Fields', () => {
         .send({
           name: 'Tech No Cert',
           email: 'tech.nocert@test.com',
-          certification: 'Some Cert' // This should be ignored
+          certification: 'Should not be saved', // This should be ignored
+          location_id: 456
         });
 
       expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
       expect(res.body.data.technicianProfile).toBeDefined();
+      expect(res.body.data.technicianProfile.location_id).toBe(456);
+      
+      // Certification field should not exist in the model
       expect(res.body.data.technicianProfile.certification).toBeUndefined();
+    });
+
+    it('should create technician with minimal required data', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Minimal Tech',
+          email: 'minimal.tech@test.com'
+          // All other fields are optional
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.technicianProfile).toBeDefined();
+      expect(res.body.data.technicianProfile.location_id).toBeNull();
+      expect(res.body.data.technicianProfile.specialization).toBeNull();
+      expect(res.body.data.technicianProfile.experienceYears).toBeNull();
+      expect(res.body.data.technicianProfile.employeeId).toBeNull();
+      expect(res.body.data.technicianProfile.isAvailable).toBe(true); // Default value
+    });
+
+    it('should validate experienceYears cannot be negative', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Invalid Experience Tech',
+          email: 'invalid.exp@test.com',
+          experienceYears: -5 // Should fail validation
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toContain('Experience years cannot be negative');
+    });
+
+    it('should handle duplicate employeeId', async () => {
+      // First, create a technician with employeeId
+      await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'First Tech',
+          email: 'first.tech@test.com',
+          employeeId: 'DUPLICATE123'
+        });
+
+      // Try to create another with same employeeId
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Second Tech',
+          email: 'second.tech@test.com',
+          employeeId: 'DUPLICATE123' // Should fail due to unique constraint
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
     });
   });
 

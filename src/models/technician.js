@@ -55,7 +55,7 @@ const Technician = sequelize.define(
       defaultValue: true,
       comment: 'Availability status for task assignment'
     },
-    locationId: {
+    location_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
       comment: 'Location/area the technician covers'
@@ -80,7 +80,7 @@ const Technician = sequelize.define(
         fields: ['isAvailable']
       },
       {
-        fields: ['locationId']
+        fields: ['location_id']
       }
     ],
     // Remove userId from JSON responses to avoid duplication

@@ -31,7 +31,6 @@ module.exports = {
           userId: technicians[0].id,
           specialization: 'Electrical Systems',
           experienceYears: 5,
-          certification: 'Licensed Electrician',
           employeeId: 'TECH-001',
           isAvailable: true,
           createdAt: new Date(),
@@ -41,7 +40,6 @@ module.exports = {
           userId: technicians[1].id,
           specialization: 'Mechanical Engineering',
           experienceYears: 3,
-          certification: 'Certified Mechanic',
           employeeId: 'TECH-002',
           isAvailable: true,
           createdAt: new Date(),
@@ -55,21 +53,15 @@ module.exports = {
       await queryInterface.bulkInsert('BranchManagers', [
         {
           userId: branchManagers[0].id,
-          branchId: 'BR-COLOMBO-01',
-          branchName: 'Colombo Main Branch',
-          region: 'Western Province',
+          branchId: '01',
           employeeId: 'MGR-001',
-          managementLevel: 'senior',
           createdAt: new Date(),
           updatedAt: new Date()
         },
         branchManagers.length > 1 ? {
           userId: branchManagers[1].id,
-          branchId: 'BR-KANDY-01',
-          branchName: 'Kandy Branch',
-          region: 'Central Province',
+          branchId: '02',
           employeeId: 'MGR-002',
-          managementLevel: 'junior',
           createdAt: new Date(),
           updatedAt: new Date()
         } : null
@@ -81,21 +73,13 @@ module.exports = {
       await queryInterface.bulkInsert('MaintenanceExecutives', [
         {
           userId: executives[0].id,
-          department: 'Operations',
-          level: 'senior_executive',
           employeeId: 'EXEC-001',
-          responsibilities: 'Oversee all maintenance operations and ensure compliance',
-          authorityLevel: 4,
           createdAt: new Date(),
           updatedAt: new Date()
         },
         executives.length > 1 ? {
           userId: executives[1].id,
-          department: 'Facilities Management',
-          level: 'executive',
           employeeId: 'EXEC-002',
-          responsibilities: 'Manage facility maintenance and vendor relationships',
-          authorityLevel: 2,
           createdAt: new Date(),
           updatedAt: new Date()
         } : null
