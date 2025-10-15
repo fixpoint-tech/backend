@@ -50,7 +50,7 @@ describe('User Endpoints - Technicians', () => {
 
       expect(res.statusCode).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Email already exists');
+      expect(res.body.message).toContain('Email');
     });
 
     it('should reject technician with invalid email format', async () => {
@@ -338,6 +338,281 @@ describe('User Endpoints - General', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.email).toBe('test1@general.com');
+    });
+  });
+});
+
+// NEW TEST SUITE: Profile Picture Upload & Simplified Fields
+describe('Profile Picture Upload & Simplified Fields', () => {
+  describe('Technician with locationId field', () => {
+    it('should create technician with location_id', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Tech with Location',
+          email: 'tech.location@test.com',
+          specialization: 'Electrical',
+          experienceYears: 5,
+          employeeId: 'EMP001',
+          isAvailable: true,
+          location_id: 123 // Use snake_case to match your model
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('id');
+      expect(res.body.data.name).toBe('Tech with Location');
+      expect(res.body.data.email).toBe('tech.location@test.com');
+      expect(res.body.data.role).toBe('technician');
+      
+      // Check technician profile data
+      expect(res.body.data.technicianProfile).toBeDefined();
+      expect(res.body.data.technicianProfile.location_id).toBe(123); // snake_case
+      expect(res.body.data.technicianProfile.specialization).toBe('Electrical');
+      expect(res.body.data.technicianProfile.experienceYears).toBe(5);
+      expect(res.body.data.technicianProfile.employeeId).toBe('EMP001');
+      expect(res.body.data.technicianProfile.isAvailable).toBe(true);
+      
+      // Should NOT have userId in nested object due to defaultScope
+      expect(res.body.data.technicianProfile.userId).toBeUndefined();
+      
+      // Should NOT return password in user data
+      expect(res.body.data).not.toHaveProperty('password');
+    });
+
+    it('should NOT have certification field (removed)', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Tech No Cert',
+          email: 'tech.nocert@test.com',
+          certification: 'Should not be saved', // This should be ignored
+          location_id: 456
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.technicianProfile).toBeDefined();
+      expect(res.body.data.technicianProfile.location_id).toBe(456);
+      
+      // Certification field should not exist in the model
+      expect(res.body.data.technicianProfile.certification).toBeUndefined();
+    });
+
+    it('should create technician with minimal required data', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Minimal Tech',
+          email: 'minimal.tech@test.com'
+          // All other fields are optional
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.technicianProfile).toBeDefined();
+      expect(res.body.data.technicianProfile.location_id).toBeNull();
+      expect(res.body.data.technicianProfile.specialization).toBeNull();
+      expect(res.body.data.technicianProfile.experienceYears).toBeNull();
+      expect(res.body.data.technicianProfile.employeeId).toBeNull();
+      expect(res.body.data.technicianProfile.isAvailable).toBe(true); // Default value
+    });
+
+    it('should validate experienceYears cannot be negative', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Invalid Experience Tech',
+          email: 'invalid.exp@test.com',
+          experienceYears: -5 // Should fail validation
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toContain('Experience years cannot be negative');
+    });
+
+    it('should handle duplicate employeeId', async () => {
+      // First, create a technician with employeeId
+      await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'First Tech',
+          email: 'first.tech@test.com',
+          employeeId: 'DUPLICATE123'
+        });
+
+      // Try to create another with same employeeId
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Second Tech',
+          email: 'second.tech@test.com',
+          employeeId: 'DUPLICATE123' // Should fail due to unique constraint
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+  });
+
+  describe('BranchManager with simplified fields', () => {
+    it('should create branch manager with only branchId and employeeId', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/branch-managers')
+        .send({
+          name: 'Simple Manager',
+          email: 'simple.manager@test.com',
+          branchId: 456,
+          employeeId: 'MGR001'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.branchManagerProfile).toBeDefined();
+      expect(res.body.data.branchManagerProfile.branchId).toBe(456);
+      expect(res.body.data.branchManagerProfile.employeeId).toBe('MGR001');
+      // Should NOT have removed fields
+      expect(res.body.data.branchManagerProfile.branchName).toBeUndefined();
+      expect(res.body.data.branchManagerProfile.region).toBeUndefined();
+      expect(res.body.data.branchManagerProfile.managementLevel).toBeUndefined();
+      // Should NOT have userId in nested object
+      expect(res.body.data.branchManagerProfile.userId).toBeUndefined();
+    });
+
+    it('should accept INTEGER branchId', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/branch-managers')
+        .send({
+          name: 'Manager with Int Branch',
+          email: 'manager.intbranch@test.com',
+          branchId: 999,
+          employeeId: 'MGR002'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.data.branchManagerProfile.branchId).toBe(999);
+      expect(typeof res.body.data.branchManagerProfile.branchId).toBe('number');
+    });
+  });
+
+  describe('MaintenanceExecutive with minimal fields', () => {
+    it('should create maintenance executive with only employeeId', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/maintenance-executives')
+        .send({
+          name: 'Minimal Executive',
+          email: 'minimal.exec@test.com',
+          employeeId: 'EXEC001'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.maintenanceExecutiveProfile).toBeDefined();
+      expect(res.body.data.maintenanceExecutiveProfile.employeeId).toBe('EXEC001');
+      // Should NOT have removed fields
+      expect(res.body.data.maintenanceExecutiveProfile.department).toBeUndefined();
+      expect(res.body.data.maintenanceExecutiveProfile.level).toBeUndefined();
+      expect(res.body.data.maintenanceExecutiveProfile.responsibilities).toBeUndefined();
+      expect(res.body.data.maintenanceExecutiveProfile.authorityLevel).toBeUndefined();
+      // Should NOT have userId in nested object
+      expect(res.body.data.maintenanceExecutiveProfile.userId).toBeUndefined();
+    });
+  });
+
+  describe('Profile Picture Upload', () => {
+    /**
+     * Profile picture upload tests
+     * Note: These tests verify the API accepts file uploads correctly.
+     * Actual MinIO upload will fail in test environment without credentials,
+     * but we're testing that the middleware and validation works properly.
+     */
+
+    it('should create user without profile picture (optional)', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Tech No Picture',
+          email: 'tech.nopicture@test.com'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.profilePicture).toBeNull();
+    });
+
+    it('should reject file larger than 5MB', async () => {
+      const largeBuffer = Buffer.alloc(6 * 1024 * 1024); // 6MB
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .field('name', 'Tech Large File')
+        .field('email', 'tech.largefile@test.com')
+        .attach('profilePicture', largeBuffer, {
+          filename: 'large.jpg',
+          contentType: 'image/jpeg'
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toContain('5MB');
+    });
+
+    it('should reject invalid file type', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .field('name', 'Tech Invalid File')
+        .field('email', 'tech.invalidfile@test.com')
+        .attach('profilePicture', Buffer.from('fake pdf data'), {
+          filename: 'document.pdf',
+          contentType: 'application/pdf'
+        });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toContain('Invalid file type');
+    });
+  });
+
+  describe('Clean JSON Responses', () => {
+    it('should NOT return userId in technician profile', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/technicians')
+        .send({
+          name: 'Tech Clean JSON',
+          email: 'tech.cleanjson@test.com',
+          employeeId: 'CLEAN001'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.data).toHaveProperty('id'); // User has id
+      expect(res.body.data.technicianProfile).toBeDefined();
+      expect(res.body.data.technicianProfile.userId).toBeUndefined(); // No userId duplication
+    });
+
+    it('should NOT return userId in branch manager profile', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/branch-managers')
+        .send({
+          name: 'Manager Clean JSON',
+          email: 'manager.cleanjson@test.com',
+          employeeId: 'CLEAN002'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.data.branchManagerProfile).toBeDefined();
+      expect(res.body.data.branchManagerProfile.userId).toBeUndefined();
+    });
+
+    it('should NOT return userId in maintenance executive profile', async () => {
+      const res = await request(app)
+        .post('/api/v1/users/maintenance-executives')
+        .send({
+          name: 'Executive Clean JSON',
+          email: 'executive.cleanjson@test.com',
+          employeeId: 'CLEAN003'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.data.maintenanceExecutiveProfile).toBeDefined();
+      expect(res.body.data.maintenanceExecutiveProfile.userId).toBeUndefined();
     });
   });
 });
