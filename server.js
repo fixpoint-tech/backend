@@ -6,6 +6,7 @@ import healthRoutes from './src/routes/health.js';
 import { setupSocket } from './src/socket/socket.js';
 import issueRoutes from './src/routes/issues.js';
 import userRoutes from './src/routes/users.js';
+import messageRoutes from './src/routes/messages.js'; 
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +24,7 @@ app.use('/api/health', healthRoutes);
 
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/messages', messageRoutes);
 
 // Basic route
 app.get('/api/', (req, res) => {
@@ -64,4 +66,4 @@ async function startServer() {
 }
 
 // Start the server
-startServer();
+  startServer();
