@@ -1,7 +1,4 @@
 /**
- * Manual Test Script for Cash Requests API
- * Run this after starting the server to test the endpoints
- *
  * Usage: node src/__tests__/cash-requests.test.js
  */
 
@@ -9,15 +6,12 @@ const BASE_URL = 'http://localhost:5000/api/v1/cash-requests';
 
 // Sample test data
 const sampleCashRequest = {
-    technician_id: '123e4567-e89b-12d3-a456-426614174000',
-    ticket_id: '789e0123-e45b-67c8-a901-234567890000',
+    technician_id: 1,
+    ticket_id: 1,
     amount: 150.00,
     description: 'Spare parts for refrigerator repair including compressor relay and thermostat'
 };
 
-/**
- * Test helper function to make HTTP requests
- */
 async function testRequest(method, url, body = null) {
     const options = {
         method,
@@ -39,9 +33,6 @@ async function testRequest(method, url, body = null) {
     }
 }
 
-/**
- * Run all tests
- */
 async function runTests() {
     console.log('🧪 Testing Cash Requests API...\n');
 
@@ -139,7 +130,7 @@ async function runTests() {
 
     // Test 7.6: Get Cash Requests by Ticket ID (non-existent)
     console.log('\n7.6️⃣  Testing filtering by non-existent ticket ID...');
-    const getByTicketEmptyResult = await testRequest('GET', `${BASE_URL}/by-ticket?ticket_id=99999999-9999-9999-9999-999999999999`);
+    const getByTicketEmptyResult = await testRequest('GET', `${BASE_URL}/by-ticket?ticket_id=99999`);
     if (getByTicketEmptyResult.data && getByTicketEmptyResult.data.success && getByTicketEmptyResult.data.count === 0) {
         console.log('✅ Correctly returned empty results for non-existent ticket');
     } else {
@@ -161,7 +152,7 @@ async function runTests() {
     // Test 9: Validation Test (should fail)
     console.log('\n9️⃣  Testing validation (should fail)...');
     const invalidRequest = {
-        technician_id: 'invalid-uuid',
+        technician_id: 'invalid-id',
         amount: -50,
         description: 'Short'
     };
@@ -187,10 +178,8 @@ async function runTests() {
     console.log('\n✨ Testing complete!\n');
 }
 
-// Export for manual testing
 export { runTests };
 
-// Run tests if this file is executed directly
 if (process.argv[1].includes('cash-requests.test.js')) {
     runTests().catch(console.error);
 }
@@ -199,16 +188,11 @@ if (process.argv[1].includes('cash-requests.test.js')) {
 if (typeof describe !== 'undefined') {
     describe('Cash Requests API - Integration Tests', () => {
         test('manual integration test placeholder', () => {
-            // This placeholder prevents Jest from failing with "no tests found"
-            // To run actual integration tests, ensure server is running and execute:
-            // node src/__tests__/cash-requests.test.js
             expect(true).toBe(true);
         });
     });
 
-    // Clean up resources to prevent Jest worker leak warnings
     afterAll(async () => {
-        // Close http(s) global agents to prevent open handles
         try {
             const http = await import('http');
             const https = await import('https');

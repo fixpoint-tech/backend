@@ -1,8 +1,3 @@
-/**
- * Petty Cash Request Model
- * Sequelize model for petty cash requests
- */
-
 import { DataTypes } from 'sequelize';
 import { getSequelizeInstance } from '../services/connectionService.js';
 
@@ -18,13 +13,29 @@ const PettyCashRequest = sequelize.define(
             allowNull: false
         },
         technician_id: {
-            type: DataTypes.UUID,
+            type: DataTypes.INTEGER,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Technician ID is required'
+                },
+                isInt: {
+                    msg: 'Technician ID must be an integer'
+                }
+            },
             comment: 'Foreign key reference to the technician who submitted the request'
         },
         ticket_id: {
-            type: DataTypes.UUID,
+            type: DataTypes.INTEGER,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Ticket ID is required'
+                },
+                isInt: {
+                    msg: 'Ticket ID must be an integer'
+                }
+            },
             comment: 'Foreign key reference to the maintenance ticket'
         },
         amount: {
@@ -113,10 +124,6 @@ const PettyCashRequest = sequelize.define(
         ]
     }
 );
-
-/**
- * Model methods for common queries
- */
 
 /**
  * Get all petty cash requests with optional filtering
