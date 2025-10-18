@@ -6,6 +6,7 @@ import healthRoutes from './src/routes/health.js';
 import { setupSocket } from './src/socket/socket.js';
 import issueRoutes from './src/routes/issues.js';
 import userRoutes from './src/routes/users.js';
+import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -18,15 +19,20 @@ setupSocket(server);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware
+app.use(express.json()); // Parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
 // Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/v1/cash-requests', cashRequestRoutes);
 
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/users', userRoutes);
 
 // Basic route
 app.get('/api/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'FixPoint API Server is running!',
     version: '1.0.0',
     timestamp: new Date().toISOString()
@@ -36,18 +42,18 @@ app.get('/api/', (req, res) => {
 // Initialize services and start server
 async function startServer() {
   const PORT = process.env.PORT || 5000;
-  
+
   try {
     console.log('Starting FixPoint Server...');
-    
+
     // Initialize database connection
     console.log('Initializing database connection...');
     await initializeDatabase();
-    
+
     // Initialize MinIO storage
     console.log('Initializing MinIO storage...');
     await initializeStorage();
-    
+
     // Start the server
     server.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
@@ -55,8 +61,9 @@ async function startServer() {
       console.log(`Health check: http://localhost:${PORT}/api/health`);
       console.log(`Database health: http://localhost:${PORT}/api/health/database`);
       console.log(`Storage health: http://localhost:${PORT}/api/health/storage`);
+      console.log(`Cash Requests API: http://localhost:${PORT}/api/v1/cash-requests`);
     });
-    
+
   } catch (error) {
     console.error('Failed to start server:', error.message);
     process.exit(1);

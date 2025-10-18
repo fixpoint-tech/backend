@@ -1,6 +1,7 @@
 import { getSequelizeInstance } from '../services/connectionService.js';
 import Issue from './issue.js';
 import User from './user.js';
+import PettyCashRequest from './pettyCashRequest.js';
 import Technician from './technician.js';
 import BranchManager from './branchManager.js';
 import MaintenanceExecutive from './maintenanceExecutive.js';
@@ -50,6 +51,7 @@ MaintenanceExecutive.belongsTo(User, {
 const models = {
   Issue,
   User,
+  PettyCashRequest,
   Technician,
   BranchManager,
   MaintenanceExecutive,
@@ -59,8 +61,16 @@ const models = {
 // Define associations here when you have multiple models
 // For example:
 // Issue.belongsTo(User, { foreignKey: 'userid' });
-// Issue.belongsTo(Branch, { foreignKey: 'branch_id' });
-// Note: User-role relationships are now defined above
-
+// PettyCashRequest.belongsTo(User, { foreignKey: 'technician_id' });
+// Note: No relationships defined yet to avoid conflicts during development
+// Export a single default and named exports for convenience
 export default models;
-export { Issue, User, Technician, BranchManager, MaintenanceExecutive, sequelize };
+export {
+  Issue,
+  User,
+  PettyCashRequest,
+  Technician,
+  BranchManager,
+  MaintenanceExecutive,
+  sequelize
+};
