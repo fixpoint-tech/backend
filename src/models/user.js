@@ -95,4 +95,8 @@ const User = sequelize.define(
   }
 );
 
+// Define associations
+// Note: The actual association setup happens in src/models/index.js
+// to avoid circular dependency issues
+
 export default User;
