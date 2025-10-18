@@ -8,6 +8,7 @@ import {
   validateUpdateUser,
   validateUserId
 } from '../middleware/validation.js';
+import { uploadProfilePicture, handleUploadError } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ const router = express.Router();
  * @desc    Create a new technician
  * @access  Public (no auth for now)
  */
-router.post('/technicians', validateCreateUser, technicianController.createTechnician);
+router.post('/technicians', uploadProfilePicture, handleUploadError, validateCreateUser, technicianController.createTechnician);
 
 /**
  * @route   GET /api/v1/users/technicians
@@ -43,6 +44,8 @@ router.get('/technicians/:id', validateUserId, technicianController.getTechnicia
  */
 router.put(
   '/technicians/:id',
+  uploadProfilePicture,
+  handleUploadError,
   validateUserId,
   validateUpdateUser,
   technicianController.updateTechnician
@@ -64,7 +67,7 @@ router.delete('/technicians/:id', validateUserId, technicianController.deleteTec
  * @desc    Create a new branch manager
  * @access  Public
  */
-router.post('/branch-managers', validateCreateUser, branchManagerController.createBranchManager);
+router.post('/branch-managers', uploadProfilePicture, handleUploadError, validateCreateUser, branchManagerController.createBranchManager);
 
 /**
  * @route   GET /api/v1/users/branch-managers
@@ -87,6 +90,8 @@ router.get('/branch-managers/:id', validateUserId, branchManagerController.getBr
  */
 router.put(
   '/branch-managers/:id',
+  uploadProfilePicture,
+  handleUploadError,
   validateUserId,
   validateUpdateUser,
   branchManagerController.updateBranchManager
@@ -110,6 +115,8 @@ router.delete('/branch-managers/:id', validateUserId, branchManagerController.de
  */
 router.post(
   '/maintenance-executives',
+  uploadProfilePicture,
+  handleUploadError,
   validateCreateUser,
   maintenanceExecutiveController.createMaintenanceExecutive
 );
@@ -139,6 +146,8 @@ router.get(
  */
 router.put(
   '/maintenance-executives/:id',
+  uploadProfilePicture,
+  handleUploadError,
   validateUserId,
   validateUpdateUser,
   maintenanceExecutiveController.updateMaintenanceExecutive

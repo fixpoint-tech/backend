@@ -1,4 +1,5 @@
 import userService from '../services/userService.js';
+import { uploadProfilePicture } from '../services/uploadService.js';
 
 /**
  * Technician Controller
@@ -11,12 +12,48 @@ class TechnicianController {
    */
   async createTechnician(req, res) {
     try {
-      const technicianData = {
-        ...req.body,
+      // Handle file upload if present
+      let profilePictureUrl = req.body.profilePicture;
+      
+      if (req.file) {
+        try {
+          profilePictureUrl = await uploadProfilePicture(
+            req.file.buffer,
+            req.file.originalname,
+            req.file.mimetype
+          );
+        } catch (uploadError) {
+          return res.status(500).json({
+            success: false,
+            message: `File upload failed: ${uploadError.message}`
+          });
+        }
+      }
+
+      // Extract user fields from request body
+      const { name, email, password, phone } = req.body;
+      
+      const userData = {
+        name,
+        email,
         role: 'technician'
       };
+      
+      // Add optional user fields if provided
+      if (password !== undefined) userData.password = password;
+      if (phone !== undefined) userData.phone = phone;
+      if (profilePictureUrl !== undefined) userData.profilePicture = profilePictureUrl;
 
-      const technician = await userService.createUser(technicianData);
+      // Extract profile-specific fields (everything else)
+      const profileData = {};
+      const userFields = ['name', 'email', 'password', 'phone', 'profilePicture', 'role'];
+      Object.keys(req.body).forEach(key => {
+        if (!userFields.includes(key)) {
+          profileData[key] = req.body[key];
+        }
+      });
+
+      const technician = await userService.createUser(userData, profileData);
 
       res.status(201).json({
         success: true,
@@ -94,7 +131,32 @@ class TechnicianController {
         });
       }
 
-      const updatedTechnician = await userService.updateUser(req.params.id, req.body);
+      // Handle file upload if present
+      let profilePictureUrl = req.body.profilePicture;
+      
+      if (req.file) {
+        try {
+          profilePictureUrl = await uploadProfilePicture(
+            req.file.buffer,
+            req.file.originalname,
+            req.file.mimetype
+          );
+        } catch (uploadError) {
+          return res.status(500).json({
+            success: false,
+            message: `File upload failed: ${uploadError.message}`
+          });
+        }
+      }
+
+      const { name, phone, ...profileData } = req.body;
+      
+      const userData = {};
+      if (name !== undefined) userData.name = name;
+      if (phone !== undefined) userData.phone = phone;
+      if (profilePictureUrl !== undefined) userData.profilePicture = profilePictureUrl;
+
+      const updatedTechnician = await userService.updateUser(req.params.id, userData, profileData);
 
       res.status(200).json({
         success: true,

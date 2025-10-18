@@ -7,6 +7,7 @@ import { setupSocket } from './src/socket/socket.js';
 import issueRoutes from './src/routes/issues.js';
 import userRoutes from './src/routes/users.js';
 import thirdPartiesRoutes from './src/routes/thirdparties.js';
+import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -19,8 +20,13 @@ setupSocket(server);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware
+app.use(express.json()); // Parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
 // Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/v1/cash-requests', cashRequestRoutes);
 
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/users', userRoutes);
@@ -57,6 +63,7 @@ async function startServer() {
       console.log(`Health check: http://localhost:${PORT}/api/health`);
       console.log(`Database health: http://localhost:${PORT}/api/health/database`);
       console.log(`Storage health: http://localhost:${PORT}/api/health/storage`);
+      console.log(`Cash Requests API: http://localhost:${PORT}/api/v1/cash-requests`);
     });
 
   } catch (error) {
