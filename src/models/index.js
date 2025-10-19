@@ -1,6 +1,7 @@
 import { getSequelizeInstance } from '../services/connectionService.js';
 import Issue from './issue.js';
 import User from './user.js';
+import Branch from './branch.js';
 import PettyCashRequest from './pettyCashRequest.js';
 import Technician from './technician.js';
 import BranchManager from './branchManager.js';
@@ -70,7 +71,8 @@ export {
   User,
   PettyCashRequest,
   Technician,
-  BranchManager,
+  BranchManager, 
+  Branch,
   MaintenanceExecutive,
   sequelize
 };
