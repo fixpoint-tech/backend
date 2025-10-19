@@ -309,17 +309,17 @@ export const getTechnicianStats = async (req, res) => {
 
 /**
  * Get cash requests by ticket ID
- * @route GET /api/v1/cash-requests?ticket_id=<issue_id>
- * @query {string} ticket_id - Ticket ID to filter cash requests
+ * @route GET /api/v1/cash-requests/by-ticket/:ticket_id
+ * @param {string} ticket_id - Ticket ID to filter cash requests
  */
 export const getCashRequestsByTicketId = async (req, res) => {
     try {
-        const { ticket_id } = req.query;
+        const { ticket_id } = req.params;
 
         if (!ticket_id) {
             return res.status(400).json({
                 success: false,
-                message: 'ticket_id query parameter is required'
+                message: 'ticket_id route parameter is required'
             });
         }
 

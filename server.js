@@ -6,6 +6,7 @@ import healthRoutes from './src/routes/health.js';
 import { setupSocket } from './src/socket/socket.js';
 import issueRoutes from './src/routes/issues.js';
 import userRoutes from './src/routes/users.js';
+import branchRoutes from './src/routes/branch.js';
 import thirdPartiesRoutes from './src/routes/thirdparties.js';
 import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
 
@@ -30,6 +31,7 @@ app.use('/api/v1/cash-requests', cashRequestRoutes);
 
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/branches', branchRoutes);
 app.use('/api/v1/thirdparties', thirdPartiesRoutes);
 
 // Basic route

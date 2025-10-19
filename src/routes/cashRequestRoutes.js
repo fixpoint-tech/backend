@@ -68,7 +68,7 @@ const updateCashRequestValidation = [
 ];
 
 router.get('/', getAllCashRequests);
-router.get('/by-ticket', getCashRequestsByTicketId);
+router.get('/by-ticket/:ticket_id', validateId('ticket_id'), getCashRequestsByTicketId);
 router.get('/stats/:technician_id', validateId('technician_id'), getTechnicianStats);
 router.get('/:id', validateUUID('id'), getCashRequestById);
 router.post('/', createCashRequestValidation, createCashRequest);
