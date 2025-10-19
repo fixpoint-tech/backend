@@ -91,3 +91,100 @@ export const validateUserId = [
 
   handleValidationErrors
 ];
+
+/**
+ * Validation rules for creating a third party
+ */
+export const validateCreateThirdParty = [
+  body('organization')
+    .trim()
+    .notEmpty()
+    .withMessage('Organization name is required')
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Organization name must be between 2 and 255 characters'),
+
+  body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('Email is required')
+    .isEmail()
+    .withMessage('Must be a valid email address')
+    .normalizeEmail(),
+
+  body('location')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Location must be less than 255 characters'),
+
+  body('phone')
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 20 })
+    .withMessage('Phone number must be between 10 and 20 characters'),
+
+  body('worktype')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Work type must be less than 100 characters'),
+
+  body('profilePicture')
+    .optional()
+    .isURL()
+    .withMessage('Profile picture must be a valid URL'),
+
+  handleValidationErrors
+];
+
+/**
+ * Validation rules for updating a third party
+ */
+export const validateUpdateThirdParty = [
+  body('organization')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Organization name must be between 2 and 255 characters'),
+
+  body('email')
+    .optional()
+    .trim()
+    .isEmail()
+    .withMessage('Must be a valid email address')
+    .normalizeEmail(),
+
+  body('location')
+    .optional()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Location must be less than 255 characters'),
+
+  body('phone')
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 20 })
+    .withMessage('Phone number must be between 10 and 20 characters'),
+
+  body('worktype')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Work type must be less than 100 characters'),
+
+  body('profilePicture')
+    .optional()
+    .isURL()
+    .withMessage('Profile picture must be a valid URL'),
+
+  handleValidationErrors
+];
+
+/**
+ * Validation for third party ID parameter
+ */
+export const validateThirdPartyId = [
+  param('id').isInt({ min: 1 }).withMessage('Third party ID must be a positive integer'),
+
+  handleValidationErrors
+];
