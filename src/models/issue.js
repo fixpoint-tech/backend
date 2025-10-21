@@ -61,7 +61,7 @@ const Issue = sequelize.define('Issue', {
     }
   }
 }, {
-  tableName: 'issues',
+  tableName: 'Issues',
   timestamps: true, // This will automatically add createdAt and updatedAt
   indexes: [
     {

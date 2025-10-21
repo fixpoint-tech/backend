@@ -1,4 +1,6 @@
-import { Issue } from '../models/index.js';
+import models from '../models/index.js';
+
+const { Issue } = models;
 import { Op } from 'sequelize';
 
 class IssueService {

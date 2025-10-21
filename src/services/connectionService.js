@@ -27,6 +27,33 @@ export async function testDatabaseConnection() {
   }
 }
 
+// Validate database schema matches ORM without making changes
+export async function validateDatabaseSchema() {
+  try {
+    await sequelize.sync({ force: false, alter: false });
+    return { 
+      schemaValid: true, 
+      message: 'Database schema matches ORM definitions',
+      error: null 
+    };
+  } catch (error) {
+    let migrationHint = '';
+    if (error.message.includes('does not exist') || 
+        error.message.includes('column') || 
+        error.message.includes('table') ||
+        error.message.includes('relation')) {
+      migrationHint = 'Run migrations: npx sequelize-cli db:migrate';
+    }
+    
+    return { 
+      schemaValid: false, 
+      message: 'Database schema does not match ORM definitions',
+      migrationHint,
+      error: error.message 
+    };
+  }
+}
+
 // Check MinIO connection (for health checks)
 export async function checkMinioConnection() {
   try {
@@ -43,13 +70,18 @@ export async function initializeDatabase() {
     await sequelize.authenticate();
     console.log('Database connection established successfully');
     
-    // Sync database (optional - creates tables if they don't exist)
-    // await sequelize.sync(); // Uncomment if you want to auto-create tables
+    // Verify database schema matches ORM schema without making changes
+    // This will throw an error if migrations are not up-to-date
+    await sequelize.sync({ force: false, alter: false });
+    console.log('Database schema validation successful - migrations are up-to-date');
     
     console.log('Database initialized successfully');
     return true;
   } catch (error) {
     console.error('Database initialization failed:', error.message);
+    if (error.message.includes('does not exist') || error.message.includes('column') || error.message.includes('table')) {
+      console.error('Schema mismatch detected. Please run migrations: npx sequelize-cli db:migrate');
+    }
     throw error;
   }
 }

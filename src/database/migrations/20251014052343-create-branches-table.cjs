@@ -1,7 +1,7 @@
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
-export default {
+module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('branches', {
       id: {
@@ -20,10 +20,6 @@ export default {
       },
       manager_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
-      },
-      contactNumber: {
-        type: Sequelize.STRING,
         allowNull: true,
       },
       createdAt: {

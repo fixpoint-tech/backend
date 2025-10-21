@@ -53,14 +53,14 @@ module.exports = {
       await queryInterface.bulkInsert('BranchManagers', [
         {
           userId: branchManagers[0].id,
-          branchId: '01',
+          branchId: 1, 
           employeeId: 'MGR-001',
           createdAt: new Date(),
           updatedAt: new Date()
         },
         branchManagers.length > 1 ? {
           userId: branchManagers[1].id,
-          branchId: '02',
+          branchId: 2, 
           employeeId: 'MGR-002',
           createdAt: new Date(),
           updatedAt: new Date()
