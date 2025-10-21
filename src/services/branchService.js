@@ -1,4 +1,6 @@
-import { Branch } from '../models/index.js';
+import models from '../models/index.js';
+
+const { Branch } = models;
 
 class BranchService {
   // Create a new branch

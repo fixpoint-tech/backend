@@ -1,6 +1,5 @@
 import { DataTypes } from 'sequelize';
 import { getSequelizeInstance } from '../services/connectionService.js';
-import User from './user.js'; 
 
 const sequelize = getSequelizeInstance();
 
@@ -89,22 +88,5 @@ const Message = sequelize.define(
     ]
   }
 );
-
-// Associations (optional but recommended)
-Message.associate = (models) => {
-  Message.belongsTo(models.User, {
-    as: 'Sender',
-    foreignKey: 'sender_id',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  });
-
-  Message.belongsTo(models.User, {
-    as: 'Receiver',
-    foreignKey: 'receiver_id',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  });
-};
 
 export default Message;

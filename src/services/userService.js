@@ -1,4 +1,6 @@
-import { User, Technician, BranchManager, MaintenanceExecutive } from '../models/index.js';
+import models from '../models/index.js';
+
+const { User, Technician, BranchManager, MaintenanceExecutive } = models;
 import { getSequelizeInstance } from './connectionService.js';
 
 const sequelize = getSequelizeInstance();

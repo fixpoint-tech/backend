@@ -67,7 +67,6 @@ async function startServer() {
       console.log(`Health check: http://localhost:${PORT}/api/health`);
       console.log(`Database health: http://localhost:${PORT}/api/health/database`);
       console.log(`Storage health: http://localhost:${PORT}/api/health/storage`);
-      console.log(`Cash Requests API: http://localhost:${PORT}/api/v1/cash-requests`);
     });
 
   } catch (error) {

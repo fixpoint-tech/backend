@@ -31,6 +31,12 @@ const BranchManager = sequelize.define(
     branchId: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: 'branches',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL',
       comment: 'Branch identifier - references Branch table'
     },
     employeeId: {

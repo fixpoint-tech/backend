@@ -2,6 +2,7 @@ import { getSequelizeInstance } from '../services/connectionService.js';
 import Issue from './issue.js';
 import User from './user.js';
 import Branch from './branch.js';
+import Message from './message.js';
 import PettyCashRequest from './pettyCashRequest.js';
 import Technician from './technician.js';
 import BranchManager from './branchManager.js';
@@ -48,10 +49,63 @@ MaintenanceExecutive.belongsTo(User, {
   onDelete: 'CASCADE'
 });
 
+// Branch associations
+Branch.hasMany(BranchManager, {
+  foreignKey: 'branchId',
+  as: 'managers',
+  onDelete: 'SET NULL'
+});
+
+BranchManager.belongsTo(Branch, {
+  foreignKey: 'branchId',
+  as: 'branch',
+  onDelete: 'SET NULL'
+});
+
+// Message associations
+User.hasMany(Message, {
+  foreignKey: 'sender_id',
+  as: 'sentMessages',
+  onDelete: 'CASCADE'
+});
+
+User.hasMany(Message, {
+  foreignKey: 'receiver_id',
+  as: 'receivedMessages',
+  onDelete: 'CASCADE'
+});
+
+Message.belongsTo(User, {
+  foreignKey: 'sender_id',
+  as: 'sender',
+  onDelete: 'CASCADE'
+});
+
+Message.belongsTo(User, {
+  foreignKey: 'receiver_id',
+  as: 'receiver',
+  onDelete: 'CASCADE'
+});
+
+// Issue associations
+Issue.hasMany(Message, {
+  foreignKey: 'issue_id',
+  as: 'messages',
+  onDelete: 'CASCADE'
+});
+
+Message.belongsTo(Issue, {
+  foreignKey: 'issue_id',
+  as: 'issue',
+  onDelete: 'CASCADE'
+});
+
 // Initialize all models
 const models = {
   Issue,
   User,
+  Branch,
+  Message,
   PettyCashRequest,
   Technician,
   BranchManager,
@@ -59,20 +113,5 @@ const models = {
   sequelize
 };
 
-// Define associations here when you have multiple models
-// For example:
-// Issue.belongsTo(User, { foreignKey: 'userid' });
-// PettyCashRequest.belongsTo(User, { foreignKey: 'technician_id' });
-// Note: No relationships defined yet to avoid conflicts during development
-// Export a single default and named exports for convenience
+// Export only the models object - cleaner and avoids redundancy
 export default models;
-export {
-  Issue,
-  User,
-  PettyCashRequest,
-  Technician,
-  BranchManager, 
-  Branch,
-  MaintenanceExecutive,
-  sequelize
-};

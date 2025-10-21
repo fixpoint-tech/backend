@@ -2,21 +2,32 @@ import request from 'supertest';
 import express from 'express';
 import { getSequelizeInstance } from '../services/connectionService.js';
 import userRoutes from '../routes/users.js';
+import branchRoutes from '../routes/branch.js';
 import User from '../models/user.js';
 
 const app = express();
 app.use(express.json());
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/branches', branchRoutes);
 
 let sequelize;
 
 beforeAll(async () => {
   sequelize = getSequelizeInstance();
-  await sequelize.sync({ force: true }); // Reset database before tests
+  await sequelize.sync({ force: true });
+  // try {
+  //   // Try to sync database, but don't fail if there are issues
+  //   await sequelize.sync({ force: true });
+  // } catch (error) {
+  //   console.warn('Database sync failed, tests may use existing schema:', error.message);
+  //   // Continue with existing database schema
+  // }
 });
 
 afterAll(async () => {
-  await sequelize.close();
+  if (sequelize) {
+    await sequelize.close();
+  }
 });
 
 describe('User Endpoints - Technicians', () => {
@@ -458,19 +469,29 @@ describe('Profile Picture Upload & Simplified Fields', () => {
 
   describe('BranchManager with simplified fields', () => {
     it('should create branch manager with only branchId and employeeId', async () => {
+      // First create a branch to reference
+      const branchRes = await request(app)
+        .post('/api/v1/branches')
+        .send({
+          name: 'Test Branch for Manager',
+          location: 'Test Location'
+        });
+      
+      const branchId = branchRes.body.data.id;
+
       const res = await request(app)
         .post('/api/v1/users/branch-managers')
         .send({
           name: 'Simple Manager',
           email: 'simple.manager@test.com',
-          branchId: 456,
+          branchId: branchId,
           employeeId: 'MGR001'
         });
 
       expect(res.statusCode).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.branchManagerProfile).toBeDefined();
-      expect(res.body.data.branchManagerProfile.branchId).toBe(456);
+      expect(res.body.data.branchManagerProfile.branchId).toBe(branchId);
       expect(res.body.data.branchManagerProfile.employeeId).toBe('MGR001');
       // Should NOT have removed fields
       expect(res.body.data.branchManagerProfile.branchName).toBeUndefined();
@@ -481,17 +502,27 @@ describe('Profile Picture Upload & Simplified Fields', () => {
     });
 
     it('should accept INTEGER branchId', async () => {
+      // First create a branch to reference
+      const branchRes = await request(app)
+        .post('/api/v1/branches')
+        .send({
+          name: 'Test Branch for Int Manager',
+          location: 'Test Location 2'
+        });
+      
+      const branchId = branchRes.body.data.id;
+
       const res = await request(app)
         .post('/api/v1/users/branch-managers')
         .send({
           name: 'Manager with Int Branch',
           email: 'manager.intbranch@test.com',
-          branchId: 999,
+          branchId: branchId,
           employeeId: 'MGR002'
         });
 
       expect(res.statusCode).toBe(201);
-      expect(res.body.data.branchManagerProfile.branchId).toBe(999);
+      expect(res.body.data.branchManagerProfile.branchId).toBe(branchId);
       expect(typeof res.body.data.branchManagerProfile.branchId).toBe('number');
     });
   });
