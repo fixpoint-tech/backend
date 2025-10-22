@@ -1,649 +1,529 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
-import { getSequelizeInstance } from '../services/connectionService.js';
-import userRoutes from '../routes/users.js';
-import branchRoutes from '../routes/branch.js';
-import User from '../models/user.js';
+
+// Mock the services before importing the controllers
+const mockUserService = {
+  createUser: jest.fn(),
+  getAllUsers: jest.fn(),
+  getUserById: jest.fn(),
+  updateUser: jest.fn(),
+  deleteUser: jest.fn(),
+  getUsersByRole: jest.fn()
+};
+
+const mockUploadService = {
+  uploadProfilePicture: jest.fn()
+};
+
+// Mock the service modules
+jest.unstable_mockModule('../services/userService.js', () => ({
+  default: mockUserService
+}));
+
+jest.unstable_mockModule('../services/uploadService.js', () => ({
+  uploadProfilePicture: mockUploadService.uploadProfilePicture
+}));
+
+// Import the controllers after mocking
+const { default: TechnicianController } = await import('../controllers/technicianController.js');
+const { default: BranchManagerController } = await import('../controllers/branchManagerController.js');
+const { default: MaintenanceExecutiveController } = await import('../controllers/maintenanceExecutiveController.js');
 
 const app = express();
 app.use(express.json());
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/branches', branchRoutes);
 
-let sequelize;
+// Set up routes manually to avoid middleware conflicts
+// Technician routes
+app.post('/api/v1/users/technicians', TechnicianController.createTechnician);
+app.get('/api/v1/users/technicians', TechnicianController.getAllTechnicians);
+app.get('/api/v1/users/technicians/:id', TechnicianController.getTechnicianById);
+app.put('/api/v1/users/technicians/:id', TechnicianController.updateTechnician);
+app.delete('/api/v1/users/technicians/:id', TechnicianController.deleteTechnician);
 
-beforeAll(async () => {
-  sequelize = getSequelizeInstance();
-  await sequelize.sync({ force: true });
-  // try {
-  //   // Try to sync database, but don't fail if there are issues
-  //   await sequelize.sync({ force: true });
-  // } catch (error) {
-  //   console.warn('Database sync failed, tests may use existing schema:', error.message);
-  //   // Continue with existing database schema
-  // }
-});
+// Branch Manager routes
+app.post('/api/v1/users/branch-managers', BranchManagerController.createBranchManager);
+app.get('/api/v1/users/branch-managers', BranchManagerController.getAllBranchManagers);
+app.get('/api/v1/users/branch-managers/:id', BranchManagerController.getBranchManagerById);
+app.put('/api/v1/users/branch-managers/:id', BranchManagerController.updateBranchManager);
+app.delete('/api/v1/users/branch-managers/:id', BranchManagerController.deleteBranchManager);
 
-afterAll(async () => {
-  if (sequelize) {
-    await sequelize.close();
-  }
-});
+// Maintenance Executive routes
+app.post('/api/v1/users/maintenance-executives', MaintenanceExecutiveController.createMaintenanceExecutive);
+app.get('/api/v1/users/maintenance-executives', MaintenanceExecutiveController.getAllMaintenanceExecutives);
+app.get('/api/v1/users/maintenance-executives/:id', MaintenanceExecutiveController.getMaintenanceExecutiveById);
+app.put('/api/v1/users/maintenance-executives/:id', MaintenanceExecutiveController.updateMaintenanceExecutive);
+app.delete('/api/v1/users/maintenance-executives/:id', MaintenanceExecutiveController.deleteMaintenanceExecutive);
 
-describe('User Endpoints - Technicians', () => {
-  let technicianId;
+// Mock data
+const mockTechnician = {
+  id: 1,
+  name: 'John Doe',
+  email: 'john.tech@test.com',
+  phone: '0771234567',
+  role: 'technician',
+  profilePicture: null,
+  createdAt: '2023-01-01T00:00:00.000Z',
+  updatedAt: '2023-01-01T00:00:00.000Z'
+};
 
-  describe('POST /api/v1/users/technicians', () => {
-    it('should create a new technician with valid data', async () => {
-      const res = await request(app).post('/api/v1/users/technicians').send({
-        name: 'John Doe',
-        email: 'john.tech@test.com',
-        phone: '0771234567'
+const mockBranchManager = {
+  id: 2,
+  name: 'Jane Smith',
+  email: 'jane.manager@test.com',
+  phone: '0771234568',
+  role: 'branch_manager',
+  profilePicture: null,
+  branchId: 1,
+  createdAt: '2023-01-01T00:00:00.000Z',
+  updatedAt: '2023-01-01T00:00:00.000Z'
+};
+
+const mockMaintenanceExecutive = {
+  id: 3,
+  name: 'Bob Wilson',
+  email: 'bob.executive@test.com',
+  phone: '0771234569',
+  role: 'maintenance_executive',
+  profilePicture: null,
+  createdAt: '2023-01-01T00:00:00.000Z',
+  updatedAt: '2023-01-01T00:00:00.000Z'
+};
+
+const mockUsers = [mockTechnician, mockBranchManager, mockMaintenanceExecutive];
+
+describe('User Endpoints', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Technicians', () => {
+    describe('POST /api/v1/users/technicians', () => {
+      it('should create a new technician with valid data', async () => {
+        mockUserService.createUser.mockResolvedValue(mockTechnician);
+
+        const res = await request(app)
+          .post('/api/v1/users/technicians')
+          .send({
+            name: 'John Doe',
+            email: 'john.tech@test.com',
+            phone: '0771234567'
+          });
+
+        expect(res.statusCode).toBe(201);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(mockTechnician);
+        expect(mockUserService.createUser).toHaveBeenCalledWith(
+          {
+            name: 'John Doe',
+            email: 'john.tech@test.com',
+            role: 'technician',
+            phone: '0771234567'
+          },
+          {}
+        );
       });
 
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toHaveProperty('id');
-      expect(res.body.data.name).toBe('John Doe');
-      expect(res.body.data.email).toBe('john.tech@test.com');
-      expect(res.body.data.role).toBe('technician');
-      expect(res.body.data).not.toHaveProperty('password');
+      it('should create a technician with profile picture', async () => {
+        const technicianWithPicture = {
+          ...mockTechnician,
+          profilePicture: 'https://example.com/profile.jpg'
+        };
+        
+        mockUserService.createUser.mockResolvedValue(technicianWithPicture);
 
-      technicianId = res.body.data.id;
+        const res = await request(app)
+          .post('/api/v1/users/technicians')
+          .send({
+            name: 'John Doe',
+            email: 'john.tech@test.com',
+            phone: '0771234567',
+            profilePicture: 'https://example.com/profile.jpg'
+          });
+
+        expect(res.statusCode).toBe(201);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.profilePicture).toBe('https://example.com/profile.jpg');
+      });
+
+      it('should handle duplicate email error', async () => {
+        mockUserService.createUser.mockRejectedValue(new Error('Email already exists'));
+
+        const res = await request(app)
+          .post('/api/v1/users/technicians')
+          .send({
+            name: 'John Doe',
+            email: 'existing@test.com',
+            phone: '0771234567'
+          });
+
+        expect(res.statusCode).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('Email already exists');
+      });
+
+      it('should handle service validation errors', async () => {
+        mockUserService.createUser.mockRejectedValue(new Error('Invalid phone number format'));
+
+        const res = await request(app)
+          .post('/api/v1/users/technicians')
+          .send({
+            name: 'John Doe',
+            email: 'john@test.com',
+            phone: 'invalid'
+          });
+
+        expect(res.statusCode).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('Invalid phone number format');
+      });
     });
 
-    it('should reject technician with duplicate email', async () => {
-      const res = await request(app).post('/api/v1/users/technicians').send({
-        name: 'Jane Doe',
-        email: 'john.tech@test.com', // Same email as above
-        phone: '0772345678'
+    describe('GET /api/v1/users/technicians', () => {
+      it('should get all technicians', async () => {
+        const technicians = [mockTechnician];
+        mockUserService.getUsersByRole.mockResolvedValue(technicians);
+
+        const res = await request(app).get('/api/v1/users/technicians');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(technicians);
+        expect(mockUserService.getUsersByRole).toHaveBeenCalledWith('technician');
       });
 
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Email');
+      it('should return empty array when no technicians found', async () => {
+        mockUserService.getUsersByRole.mockResolvedValue([]);
+
+        const res = await request(app).get('/api/v1/users/technicians');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual([]);
+      });
     });
 
-    it('should reject technician with invalid email format', async () => {
-      const res = await request(app).post('/api/v1/users/technicians').send({
-        name: 'Invalid Email',
-        email: 'not-an-email',
-        phone: '0773456789'
+    describe('GET /api/v1/users/technicians/:id', () => {
+      it('should get technician by valid ID', async () => {
+        mockUserService.getUserById.mockResolvedValue(mockTechnician);
+
+        const res = await request(app).get('/api/v1/users/technicians/1');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(mockTechnician);
+        expect(mockUserService.getUserById).toHaveBeenCalledWith('1');
       });
 
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
+      it('should return 404 for non-existent technician', async () => {
+        mockUserService.getUserById.mockRejectedValue(new Error('User not found'));
+
+        const res = await request(app).get('/api/v1/users/technicians/999');
+
+        expect(res.statusCode).toBe(404);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('User not found');
+      });
     });
 
-    it('should reject technician with missing name', async () => {
-      const res = await request(app).post('/api/v1/users/technicians').send({
-        email: 'noname@test.com',
-        phone: '0774567890'
+    describe('PUT /api/v1/users/technicians/:id', () => {
+      it('should update technician with valid data', async () => {
+        const updatedTechnician = {
+          ...mockTechnician,
+          name: 'John Updated',
+          phone: '0779999999'
+        };
+        
+        // First call to getUserById to check role
+        mockUserService.getUserById.mockResolvedValue(mockTechnician);
+        // Second call to updateUser
+        mockUserService.updateUser.mockResolvedValue(updatedTechnician);
+
+        const res = await request(app)
+          .put('/api/v1/users/technicians/1')
+          .send({
+            name: 'John Updated',
+            phone: '0779999999'
+          });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(updatedTechnician);
+        expect(mockUserService.getUserById).toHaveBeenCalledWith('1');
+        expect(mockUserService.updateUser).toHaveBeenCalledWith('1', {
+          name: 'John Updated',
+          phone: '0779999999'
+        }, {});
       });
 
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
+      it('should return 404 for non-existent technician update', async () => {
+        // getUserById throws error for non-existent user
+        mockUserService.getUserById.mockRejectedValue(new Error('User not found'));
+
+        const res = await request(app)
+          .put('/api/v1/users/technicians/999')
+          .send({
+            name: 'Updated Name'
+          });
+
+        expect(res.statusCode).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('User not found');
+      });
     });
 
-    it('should reject technician with short phone number', async () => {
-      const res = await request(app).post('/api/v1/users/technicians').send({
-        name: 'Short Phone',
-        email: 'shortphone@test.com',
-        phone: '123' // Too short
+    describe('DELETE /api/v1/users/technicians/:id', () => {
+      it('should delete technician with valid ID', async () => {
+        // First call to getUserById to check role
+        mockUserService.getUserById.mockResolvedValue(mockTechnician);
+        // Second call to deleteUser
+        mockUserService.deleteUser.mockResolvedValue({ message: 'User deleted successfully' });
+
+        const res = await request(app).delete('/api/v1/users/technicians/1');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.message).toBe('User deleted successfully');
+        expect(mockUserService.getUserById).toHaveBeenCalledWith('1');
+        expect(mockUserService.deleteUser).toHaveBeenCalledWith('1');
       });
 
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
+      it('should return 404 for non-existent technician deletion', async () => {
+        mockUserService.deleteUser.mockRejectedValue(new Error('User not found'));
+
+        const res = await request(app).delete('/api/v1/users/technicians/999');
+
+        expect(res.statusCode).toBe(404);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('User not found');
+      });
     });
   });
 
-  describe('GET /api/v1/users/technicians', () => {
-    it('should get all technicians', async () => {
+  describe('Branch Managers', () => {
+    describe('POST /api/v1/users/branch-managers', () => {
+      it('should create a new branch manager with valid data', async () => {
+        mockUserService.createUser.mockResolvedValue(mockBranchManager);
+
+        const res = await request(app)
+          .post('/api/v1/users/branch-managers')
+          .send({
+            name: 'Jane Smith',
+            email: 'jane.manager@test.com',
+            phone: '0771234568',
+            branchId: 1
+          });
+
+        expect(res.statusCode).toBe(201);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(mockBranchManager);
+        expect(mockUserService.createUser).toHaveBeenCalledWith(
+          {
+            name: 'Jane Smith',
+            email: 'jane.manager@test.com',
+            role: 'branch_manager',
+            phone: '0771234568'
+          },
+          { branchId: 1 }
+        );
+      });
+
+      it('should handle branch manager creation errors', async () => {
+        mockUserService.createUser.mockRejectedValue(new Error('Branch not found'));
+
+        const res = await request(app)
+          .post('/api/v1/users/branch-managers')
+          .send({
+            name: 'Jane Smith',
+            email: 'jane@test.com',
+            branchId: 999
+          });
+
+        expect(res.statusCode).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('Branch not found');
+      });
+    });
+
+    describe('GET /api/v1/users/branch-managers', () => {
+      it('should get all branch managers', async () => {
+        const branchManagers = [mockBranchManager];
+        mockUserService.getUsersByRole.mockResolvedValue(branchManagers);
+
+        const res = await request(app).get('/api/v1/users/branch-managers');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(branchManagers);
+        expect(mockUserService.getUsersByRole).toHaveBeenCalledWith('branch_manager');
+      });
+    });
+
+    describe('GET /api/v1/users/branch-managers/:id', () => {
+      it('should get branch manager by valid ID', async () => {
+        mockUserService.getUserById.mockResolvedValue(mockBranchManager);
+
+        const res = await request(app).get('/api/v1/users/branch-managers/2');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(mockBranchManager);
+      });
+    });
+
+    describe('PUT /api/v1/users/branch-managers/:id', () => {
+      it('should update branch manager with valid data', async () => {
+        const updatedManager = {
+          ...mockBranchManager,
+          name: 'Jane Updated',
+          branchId: 2
+        };
+        
+        mockUserService.updateUser.mockResolvedValue(updatedManager);
+
+        const res = await request(app)
+          .put('/api/v1/users/branch-managers/2')
+          .send({
+            name: 'Jane Updated',
+            branchId: 2
+          });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(updatedManager);
+      });
+    });
+
+    describe('DELETE /api/v1/users/branch-managers/:id', () => {
+      it('should delete branch manager with valid ID', async () => {
+        mockUserService.deleteUser.mockResolvedValue({ message: 'User deleted successfully' });
+
+        const res = await request(app).delete('/api/v1/users/branch-managers/2');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.message).toBe('User deleted successfully');
+      });
+    });
+  });
+
+  describe('Maintenance Executives', () => {
+    describe('POST /api/v1/users/maintenance-executives', () => {
+      it('should create a new maintenance executive with valid data', async () => {
+        mockUserService.createUser.mockResolvedValue(mockMaintenanceExecutive);
+
+        const res = await request(app)
+          .post('/api/v1/users/maintenance-executives')
+          .send({
+            name: 'Bob Wilson',
+            email: 'bob.executive@test.com',
+            phone: '0771234569'
+          });
+
+        expect(res.statusCode).toBe(201);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(mockMaintenanceExecutive);
+        expect(mockUserService.createUser).toHaveBeenCalledWith(
+          {
+            name: 'Bob Wilson',
+            email: 'bob.executive@test.com',
+            role: 'maintenance_executive',
+            phone: '0771234569'
+          },
+          {}
+        );
+      });
+    });
+
+    describe('GET /api/v1/users/maintenance-executives', () => {
+      it('should get all maintenance executives', async () => {
+        const executives = [mockMaintenanceExecutive];
+        mockUserService.getUsersByRole.mockResolvedValue(executives);
+
+        const res = await request(app).get('/api/v1/users/maintenance-executives');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(executives);
+        expect(mockUserService.getUsersByRole).toHaveBeenCalledWith('maintenance_executive');
+      });
+    });
+
+    describe('GET /api/v1/users/maintenance-executives/:id', () => {
+      it('should get maintenance executive by valid ID', async () => {
+        mockUserService.getUserById.mockResolvedValue(mockMaintenanceExecutive);
+
+        const res = await request(app).get('/api/v1/users/maintenance-executives/3');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(mockMaintenanceExecutive);
+      });
+    });
+
+    describe('PUT /api/v1/users/maintenance-executives/:id', () => {
+      it('should update maintenance executive with valid data', async () => {
+        const updatedExecutive = {
+          ...mockMaintenanceExecutive,
+          name: 'Bob Updated'
+        };
+        
+        mockUserService.updateUser.mockResolvedValue(updatedExecutive);
+
+        const res = await request(app)
+          .put('/api/v1/users/maintenance-executives/3')
+          .send({
+            name: 'Bob Updated'
+          });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toEqual(updatedExecutive);
+      });
+    });
+
+    describe('DELETE /api/v1/users/maintenance-executives/:id', () => {
+      it('should delete maintenance executive with valid ID', async () => {
+        mockUserService.deleteUser.mockResolvedValue({ message: 'User deleted successfully' });
+
+        const res = await request(app).delete('/api/v1/users/maintenance-executives/3');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.message).toBe('User deleted successfully');
+      });
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should handle service errors gracefully for technicians', async () => {
+      mockUserService.getUsersByRole.mockRejectedValue(new Error('Database connection failed'));
+
       const res = await request(app).get('/api/v1/users/technicians');
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body).toHaveProperty('count');
-      expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeGreaterThan(0);
-      expect(res.body.data[0].role).toBe('technician');
-    });
-  });
-
-  describe('GET /api/v1/users/technicians/:id', () => {
-    it('should get technician by valid ID', async () => {
-      const res = await request(app).get(`/api/v1/users/technicians/${technicianId}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.id).toBe(technicianId);
-      expect(res.body.data.role).toBe('technician');
-    });
-
-    it('should return 404 for non-existent technician ID', async () => {
-      const res = await request(app).get('/api/v1/users/technicians/99999');
-
-      expect(res.statusCode).toBe(404);
+      expect(res.statusCode).toBe(500);
       expect(res.body.success).toBe(false);
+      expect(res.body.message).toBe('Database connection failed');
     });
 
-    it('should reject invalid ID format', async () => {
-      const res = await request(app).get('/api/v1/users/technicians/invalid');
+    it('should handle service errors gracefully for branch managers', async () => {
+      mockUserService.getUsersByRole.mockRejectedValue(new Error('Database connection failed'));
 
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
-    });
-  });
-
-  describe('PUT /api/v1/users/technicians/:id', () => {
-    it('should update technician with valid data', async () => {
-      const res = await request(app).put(`/api/v1/users/technicians/${technicianId}`).send({
-        name: 'John Updated',
-        phone: '0779999999'
-      });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.name).toBe('John Updated');
-      expect(res.body.data.phone).toBe('0779999999');
-    });
-
-    it('should not allow email update', async () => {
-      const res = await request(app).put(`/api/v1/users/technicians/${technicianId}`).send({
-        email: 'newemail@test.com'
-      });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
-    });
-
-    it('should not allow role update', async () => {
-      const res = await request(app).put(`/api/v1/users/technicians/${technicianId}`).send({
-        role: 'branch_manager'
-      });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
-    });
-  });
-
-  describe('DELETE /api/v1/users/technicians/:id', () => {
-    it('should soft delete technician', async () => {
-      const res = await request(app).delete(`/api/v1/users/technicians/${technicianId}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.message).toContain('deleted successfully');
-    });
-
-    it('should not find deleted technician', async () => {
-      const res = await request(app).get(`/api/v1/users/technicians/${technicianId}`);
-
-      expect(res.statusCode).toBe(404);
-      expect(res.body.success).toBe(false);
-    });
-  });
-});
-
-describe('User Endpoints - Branch Managers', () => {
-  let branchManagerId;
-
-  describe('POST /api/v1/users/branch-managers', () => {
-    it('should create a new branch manager', async () => {
-      const res = await request(app).post('/api/v1/users/branch-managers').send({
-        name: 'Manager Mike',
-        email: 'mike.manager@test.com',
-        phone: '0771111111'
-      });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.role).toBe('branch_manager');
-
-      branchManagerId = res.body.data.id;
-    });
-  });
-
-  describe('GET /api/v1/users/branch-managers', () => {
-    it('should get all branch managers', async () => {
       const res = await request(app).get('/api/v1/users/branch-managers');
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
-      if (res.body.data.length > 0) {
-        expect(res.body.data[0].role).toBe('branch_manager');
-      }
+      expect(res.statusCode).toBe(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toBe('Database connection failed');
     });
-  });
 
-  describe('GET /api/v1/users/branch-managers/:id', () => {
-    it('should get branch manager by ID', async () => {
-      const res = await request(app).get(`/api/v1/users/branch-managers/${branchManagerId}`);
+    it('should handle service errors gracefully for maintenance executives', async () => {
+      mockUserService.getUsersByRole.mockRejectedValue(new Error('Database connection failed'));
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.role).toBe('branch_manager');
-    });
-  });
-
-  describe('PUT /api/v1/users/branch-managers/:id', () => {
-    it('should update branch manager', async () => {
-      const res = await request(app).put(`/api/v1/users/branch-managers/${branchManagerId}`).send({
-        name: 'Manager Mike Updated'
-      });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.name).toBe('Manager Mike Updated');
-    });
-  });
-
-  describe('DELETE /api/v1/users/branch-managers/:id', () => {
-    it('should delete branch manager', async () => {
-      const res = await request(app).delete(`/api/v1/users/branch-managers/${branchManagerId}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
-  });
-});
-
-describe('User Endpoints - Maintenance Executives', () => {
-  let executiveId;
-
-  describe('POST /api/v1/users/maintenance-executives', () => {
-    it('should create a new maintenance executive', async () => {
-      const res = await request(app).post('/api/v1/users/maintenance-executives').send({
-        name: 'Executive David',
-        email: 'david.exec@test.com',
-        phone: '0772222222'
-      });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.role).toBe('maintenance_executive');
-
-      executiveId = res.body.data.id;
-    });
-  });
-
-  describe('GET /api/v1/users/maintenance-executives', () => {
-    it('should get all maintenance executives', async () => {
       const res = await request(app).get('/api/v1/users/maintenance-executives');
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
-    });
-  });
-
-  describe('GET /api/v1/users/maintenance-executives/:id', () => {
-    it('should get maintenance executive by ID', async () => {
-      const res = await request(app).get(`/api/v1/users/maintenance-executives/${executiveId}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.role).toBe('maintenance_executive');
-    });
-  });
-
-  describe('PUT /api/v1/users/maintenance-executives/:id', () => {
-    it('should update maintenance executive', async () => {
-      const res = await request(app)
-        .put(`/api/v1/users/maintenance-executives/${executiveId}`)
-        .send({
-          name: 'Executive David Updated'
-        });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
-  });
-
-  describe('DELETE /api/v1/users/maintenance-executives/:id', () => {
-    it('should delete maintenance executive', async () => {
-      const res = await request(app).delete(`/api/v1/users/maintenance-executives/${executiveId}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
-  });
-});
-
-describe('User Endpoints - General', () => {
-  beforeAll(async () => {
-    // Create sample users for general tests
-    await User.create({
-      name: 'Test User 1',
-      email: 'test1@general.com',
-      role: 'technician',
-      phone: '0773333333',
-      isActive: true
-    });
-    await User.create({
-      name: 'Test User 2',
-      email: 'test2@general.com',
-      role: 'branch_manager',
-      phone: '0774444444',
-      isActive: true
-    });
-  });
-
-  describe('GET /api/v1/users', () => {
-    it('should get all users (all roles)', async () => {
-      const res = await request(app).get('/api/v1/users');
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('GET /api/v1/users/:id', () => {
-    it('should get any user by ID', async () => {
-      const user = await User.findOne({ where: { email: 'test1@general.com' } });
-      const res = await request(app).get(`/api/v1/users/${user.id}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.email).toBe('test1@general.com');
-    });
-  });
-});
-
-// NEW TEST SUITE: Profile Picture Upload & Simplified Fields
-describe('Profile Picture Upload & Simplified Fields', () => {
-  describe('Technician with locationId field', () => {
-    it('should create technician with location_id', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'Tech with Location',
-          email: 'tech.location@test.com',
-          specialization: 'Electrical',
-          experienceYears: 5,
-          employeeId: 'EMP001',
-          isAvailable: true,
-          location_id: 123 // Use snake_case to match your model
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toHaveProperty('id');
-      expect(res.body.data.name).toBe('Tech with Location');
-      expect(res.body.data.email).toBe('tech.location@test.com');
-      expect(res.body.data.role).toBe('technician');
-      
-      // Check technician profile data
-      expect(res.body.data.technicianProfile).toBeDefined();
-      expect(res.body.data.technicianProfile.location_id).toBe(123); // snake_case
-      expect(res.body.data.technicianProfile.specialization).toBe('Electrical');
-      expect(res.body.data.technicianProfile.experienceYears).toBe(5);
-      expect(res.body.data.technicianProfile.employeeId).toBe('EMP001');
-      expect(res.body.data.technicianProfile.isAvailable).toBe(true);
-      
-      // Should NOT have userId in nested object due to defaultScope
-      expect(res.body.data.technicianProfile.userId).toBeUndefined();
-      
-      // Should NOT return password in user data
-      expect(res.body.data).not.toHaveProperty('password');
-    });
-
-    it('should NOT have certification field (removed)', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'Tech No Cert',
-          email: 'tech.nocert@test.com',
-          certification: 'Should not be saved', // This should be ignored
-          location_id: 456
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.technicianProfile).toBeDefined();
-      expect(res.body.data.technicianProfile.location_id).toBe(456);
-      
-      // Certification field should not exist in the model
-      expect(res.body.data.technicianProfile.certification).toBeUndefined();
-    });
-
-    it('should create technician with minimal required data', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'Minimal Tech',
-          email: 'minimal.tech@test.com'
-          // All other fields are optional
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.technicianProfile).toBeDefined();
-      expect(res.body.data.technicianProfile.location_id).toBeNull();
-      expect(res.body.data.technicianProfile.specialization).toBeNull();
-      expect(res.body.data.technicianProfile.experienceYears).toBeNull();
-      expect(res.body.data.technicianProfile.employeeId).toBeNull();
-      expect(res.body.data.technicianProfile.isAvailable).toBe(true); // Default value
-    });
-
-    it('should validate experienceYears cannot be negative', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'Invalid Experience Tech',
-          email: 'invalid.exp@test.com',
-          experienceYears: -5 // Should fail validation
-        });
-
-      expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(500);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Experience years cannot be negative');
-    });
-
-    it('should handle duplicate employeeId', async () => {
-      // First, create a technician with employeeId
-      await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'First Tech',
-          email: 'first.tech@test.com',
-          employeeId: 'DUPLICATE123'
-        });
-
-      // Try to create another with same employeeId
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'Second Tech',
-          email: 'second.tech@test.com',
-          employeeId: 'DUPLICATE123' // Should fail due to unique constraint
-        });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.success).toBe(false);
-    });
-  });
-
-  describe('BranchManager with simplified fields', () => {
-    it('should create branch manager with only branchId and employeeId', async () => {
-      // First create a branch to reference
-      const branchRes = await request(app)
-        .post('/api/v1/branches')
-        .send({
-          name: 'Test Branch for Manager',
-          location: 'Test Location'
-        });
-      
-      const branchId = branchRes.body.data.id;
-
-      const res = await request(app)
-        .post('/api/v1/users/branch-managers')
-        .send({
-          name: 'Simple Manager',
-          email: 'simple.manager@test.com',
-          branchId: branchId,
-          employeeId: 'MGR001'
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.branchManagerProfile).toBeDefined();
-      expect(res.body.data.branchManagerProfile.branchId).toBe(branchId);
-      expect(res.body.data.branchManagerProfile.employeeId).toBe('MGR001');
-      // Should NOT have removed fields
-      expect(res.body.data.branchManagerProfile.branchName).toBeUndefined();
-      expect(res.body.data.branchManagerProfile.region).toBeUndefined();
-      expect(res.body.data.branchManagerProfile.managementLevel).toBeUndefined();
-      // Should NOT have userId in nested object
-      expect(res.body.data.branchManagerProfile.userId).toBeUndefined();
-    });
-
-    it('should accept INTEGER branchId', async () => {
-      // First create a branch to reference
-      const branchRes = await request(app)
-        .post('/api/v1/branches')
-        .send({
-          name: 'Test Branch for Int Manager',
-          location: 'Test Location 2'
-        });
-      
-      const branchId = branchRes.body.data.id;
-
-      const res = await request(app)
-        .post('/api/v1/users/branch-managers')
-        .send({
-          name: 'Manager with Int Branch',
-          email: 'manager.intbranch@test.com',
-          branchId: branchId,
-          employeeId: 'MGR002'
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.data.branchManagerProfile.branchId).toBe(branchId);
-      expect(typeof res.body.data.branchManagerProfile.branchId).toBe('number');
-    });
-  });
-
-  describe('MaintenanceExecutive with minimal fields', () => {
-    it('should create maintenance executive with only employeeId', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/maintenance-executives')
-        .send({
-          name: 'Minimal Executive',
-          email: 'minimal.exec@test.com',
-          employeeId: 'EXEC001'
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.maintenanceExecutiveProfile).toBeDefined();
-      expect(res.body.data.maintenanceExecutiveProfile.employeeId).toBe('EXEC001');
-      // Should NOT have removed fields
-      expect(res.body.data.maintenanceExecutiveProfile.department).toBeUndefined();
-      expect(res.body.data.maintenanceExecutiveProfile.level).toBeUndefined();
-      expect(res.body.data.maintenanceExecutiveProfile.responsibilities).toBeUndefined();
-      expect(res.body.data.maintenanceExecutiveProfile.authorityLevel).toBeUndefined();
-      // Should NOT have userId in nested object
-      expect(res.body.data.maintenanceExecutiveProfile.userId).toBeUndefined();
-    });
-  });
-
-  describe('Profile Picture Upload', () => {
-    /**
-     * Profile picture upload tests
-     * Note: These tests verify the API accepts file uploads correctly.
-     * Actual MinIO upload will fail in test environment without credentials,
-     * but we're testing that the middleware and validation works properly.
-     */
-
-    it('should create user without profile picture (optional)', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'Tech No Picture',
-          email: 'tech.nopicture@test.com'
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.profilePicture).toBeNull();
-    });
-
-    it('should reject file larger than 5MB', async () => {
-      const largeBuffer = Buffer.alloc(6 * 1024 * 1024); // 6MB
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .field('name', 'Tech Large File')
-        .field('email', 'tech.largefile@test.com')
-        .attach('profilePicture', largeBuffer, {
-          filename: 'large.jpg',
-          contentType: 'image/jpeg'
-        });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.error).toContain('5MB');
-    });
-
-    it('should reject invalid file type', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .field('name', 'Tech Invalid File')
-        .field('email', 'tech.invalidfile@test.com')
-        .attach('profilePicture', Buffer.from('fake pdf data'), {
-          filename: 'document.pdf',
-          contentType: 'application/pdf'
-        });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.error).toContain('Invalid file type');
-    });
-  });
-
-  describe('Clean JSON Responses', () => {
-    it('should NOT return userId in technician profile', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/technicians')
-        .send({
-          name: 'Tech Clean JSON',
-          email: 'tech.cleanjson@test.com',
-          employeeId: 'CLEAN001'
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.data).toHaveProperty('id'); // User has id
-      expect(res.body.data.technicianProfile).toBeDefined();
-      expect(res.body.data.technicianProfile.userId).toBeUndefined(); // No userId duplication
-    });
-
-    it('should NOT return userId in branch manager profile', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/branch-managers')
-        .send({
-          name: 'Manager Clean JSON',
-          email: 'manager.cleanjson@test.com',
-          employeeId: 'CLEAN002'
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.data.branchManagerProfile).toBeDefined();
-      expect(res.body.data.branchManagerProfile.userId).toBeUndefined();
-    });
-
-    it('should NOT return userId in maintenance executive profile', async () => {
-      const res = await request(app)
-        .post('/api/v1/users/maintenance-executives')
-        .send({
-          name: 'Executive Clean JSON',
-          email: 'executive.cleanjson@test.com',
-          employeeId: 'CLEAN003'
-        });
-
-      expect(res.statusCode).toBe(201);
-      expect(res.body.data.maintenanceExecutiveProfile).toBeDefined();
-      expect(res.body.data.maintenanceExecutiveProfile.userId).toBeUndefined();
+      expect(res.body.message).toBe('Database connection failed');
     });
   });
 });

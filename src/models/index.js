@@ -7,6 +7,7 @@ import PettyCashRequest from './pettyCashRequest.js';
 import Technician from './technician.js';
 import BranchManager from './branchManager.js';
 import MaintenanceExecutive from './maintenanceExecutive.js';
+import ThirdParty from './thirdParty.js';
 
 const sequelize = getSequelizeInstance();
 
@@ -62,7 +63,7 @@ BranchManager.belongsTo(Branch, {
   onDelete: 'SET NULL'
 });
 
-// Message associations
+// Message associations with User (sender and receiver)
 User.hasMany(Message, {
   foreignKey: 'sender_id',
   as: 'sentMessages',
@@ -87,7 +88,66 @@ Message.belongsTo(User, {
   onDelete: 'CASCADE'
 });
 
-// Issue associations
+// Issue associations with Branch, BranchManager, Technician, and MaintenanceExecutive
+Branch.hasMany(Issue, {
+  foreignKey: 'branch_id',
+  as: 'issues',
+  onDelete: 'CASCADE'
+});
+
+Issue.belongsTo(Branch, {
+  foreignKey: 'branch_id',
+  as: 'branch',
+  onDelete: 'CASCADE'
+});
+
+BranchManager.hasMany(Issue, {
+  foreignKey: 'manager_id',
+  as: 'issues',
+  onDelete: 'CASCADE'
+});
+
+Issue.belongsTo(BranchManager, {
+  foreignKey: 'manager_id',
+  as: 'manager',
+  onDelete: 'CASCADE'
+});
+
+Technician.hasMany(Issue, {
+  foreignKey: 'technician_id',
+  as: 'assignedIssues',
+  onDelete: 'SET NULL'
+});
+
+Issue.belongsTo(Technician, {
+  foreignKey: 'technician_id',
+  as: 'technician'
+});
+
+MaintenanceExecutive.hasMany(Issue, {
+  foreignKey: 'maintenance_executive_id',
+  as: 'assignedIssues',
+  onDelete: 'SET NULL'
+});
+
+Issue.belongsTo(MaintenanceExecutive, {
+  foreignKey: 'maintenance_executive_id',
+  as: 'maintenanceExecutive'
+});
+
+// One-to-many relationship: Issue with PettyCashRequests
+Issue.hasMany(PettyCashRequest, {
+  foreignKey: 'issue_id',
+  as: 'pettyCashRequests',
+  onDelete: 'CASCADE'
+});
+
+PettyCashRequest.belongsTo(Issue, {
+  foreignKey: 'issue_id',
+  as: 'issue'
+});
+
+// Issue associations with Messages
 Issue.hasMany(Message, {
   foreignKey: 'issue_id',
   as: 'messages',
@@ -100,6 +160,30 @@ Message.belongsTo(Issue, {
   onDelete: 'CASCADE'
 });
 
+// One-to-many relationship: ThirdParty with Issues
+ThirdParty.hasMany(Issue, {
+  foreignKey: 'third_party_id',
+  as: 'issues',
+  onDelete: 'SET NULL'
+});
+
+Issue.belongsTo(ThirdParty, {
+  foreignKey: 'third_party_id',
+  as: 'thirdParty'
+});
+
+// One-to-many relationship: Technician with PettyCashRequests
+Technician.hasMany(PettyCashRequest, {
+  foreignKey: 'technician_id',
+  as: 'pettyCashRequests',
+  onDelete: 'CASCADE'
+});
+
+PettyCashRequest.belongsTo(Technician, {
+  foreignKey: 'technician_id',
+  as: 'technician'
+});
+
 // Initialize all models
 const models = {
   Issue,
@@ -110,8 +194,9 @@ const models = {
   Technician,
   BranchManager,
   MaintenanceExecutive,
+  ThirdParty,
   sequelize
 };
 
-// Export only the models object - cleaner and avoids redundancy
+
 export default models;
