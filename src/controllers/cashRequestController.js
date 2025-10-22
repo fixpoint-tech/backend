@@ -11,7 +11,7 @@ import { validationResult } from 'express-validator';
  * @route GET /api/v1/cash-requests
  * @query {string} technician_id - Optional: Filter by technician ID
  * @query {string} status - Optional: Filter by status (pending, approved, rejected)
- * @query {string} ticket_id - Optional: Filter by ticket ID
+ * @query {string} issue_id - Optional: Filter by issue ID
  */
 export const getAllCashRequests = async (req, res) => {
     try {
@@ -26,8 +26,8 @@ export const getAllCashRequests = async (req, res) => {
             filters.status = req.query.status;
         }
 
-        if (req.query.ticket_id) {
-            filters.ticket_id = req.query.ticket_id;
+        if (req.query.issue_id) {
+            filters.issue_id = req.query.issue_id;
         }
 
         const cashRequests = await CashRequestService.getAllCashRequests(filters);
@@ -84,8 +84,8 @@ export const getCashRequestById = async (req, res) => {
 /**
  * Create a new cash request
  * @route POST /api/v1/cash-requests
- * @body {string} technician_id - Technician UUID (required)
- * @body {string} ticket_id - Ticket UUID (required)
+ * @body {string} technician_id - Technician ID (required)
+ * @body {string} issue_id - Issue ID (required)
  * @body {number} amount - Amount requested (required, must be > 0)
  * @body {string} description - Description of expense (required)
  */
@@ -101,11 +101,11 @@ export const createCashRequest = async (req, res) => {
             });
         }
 
-        const { technician_id, ticket_id, amount, description } = req.body;
+        const { technician_id, issue_id, amount, description } = req.body;
 
         const newCashRequest = await CashRequestService.createCashRequest({
             technician_id,
-            ticket_id,
+            issue_id,
             amount,
             description
         });
@@ -308,34 +308,34 @@ export const getTechnicianStats = async (req, res) => {
 };
 
 /**
- * Get cash requests by ticket ID
- * @route GET /api/v1/cash-requests/by-ticket/:ticket_id
- * @param {string} ticket_id - Ticket ID to filter cash requests
+ * Get cash requests by issue ID
+ * @route GET /api/v1/cash-requests/by-issue/:issue_id
+ * @param {string} issue_id - Issue ID to filter cash requests
  */
-export const getCashRequestsByTicketId = async (req, res) => {
+export const getCashRequestsByIssueId = async (req, res) => {
     try {
-        const { ticket_id } = req.params;
+        const { issue_id } = req.params;
 
-        if (!ticket_id) {
+        if (!issue_id) {
             return res.status(400).json({
                 success: false,
-                message: 'ticket_id route parameter is required'
+                message: 'issue_id route parameter is required'
             });
         }
 
-        const cashRequests = await CashRequestService.getAllCashRequests({ ticket_id });
+        const cashRequests = await CashRequestService.getAllCashRequests({ issue_id });
 
         res.status(200).json({
             success: true,
-            message: 'Cash requests for ticket retrieved successfully',
+            message: 'Cash requests for issue retrieved successfully',
             count: cashRequests.length,
             data: cashRequests
         });
     } catch (error) {
-        console.error('Error in getCashRequestsByTicketId:', error);
+        console.error('Error in getCashRequestsByIssueId:', error);
         res.status(500).json({
             success: false,
-            message: 'Unable to retrieve cash requests for ticket',
+            message: 'Unable to retrieve cash requests for issue',
             error: error.message
         });
     }

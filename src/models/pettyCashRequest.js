@@ -15,6 +15,12 @@ const PettyCashRequest = sequelize.define(
         technician_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            references: {
+                model: 'Technicians',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
             validate: {
                 notNull: {
                     msg: 'Technician ID is required'
@@ -25,18 +31,24 @@ const PettyCashRequest = sequelize.define(
             },
             comment: 'Foreign key reference to the technician who submitted the request'
         },
-        ticket_id: {
+        issue_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            references: {
+                model: 'Issues',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
             validate: {
                 notNull: {
-                    msg: 'Ticket ID is required'
+                    msg: 'Issue ID is required'
                 },
                 isInt: {
-                    msg: 'Ticket ID must be an integer'
+                    msg: 'Issue ID must be an integer'
                 }
             },
-            comment: 'Foreign key reference to the maintenance ticket'
+            comment: 'Foreign key reference to the issue'
         },
         amount: {
             type: DataTypes.DECIMAL(10, 2),
@@ -110,8 +122,8 @@ const PettyCashRequest = sequelize.define(
                 fields: ['technician_id']
             },
             {
-                name: 'idx_petty_cash_requests_ticket_id',
-                fields: ['ticket_id']
+                name: 'idx_petty_cash_requests_issue_id',
+                fields: ['issue_id']
             },
             {
                 name: 'idx_petty_cash_requests_status',
@@ -127,7 +139,7 @@ const PettyCashRequest = sequelize.define(
 
 /**
  * Get all petty cash requests with optional filtering
- * @param {Object} filters - Optional filters (technician_id, status, ticket_id)
+ * @param {Object} filters - Optional filters (technician_id, status, issue_id)
  * @returns {Promise<Array>} Array of cash requests
  */
 PettyCashRequest.getAllWithFilters = async function (filters = {}) {
@@ -141,8 +153,8 @@ PettyCashRequest.getAllWithFilters = async function (filters = {}) {
         whereClause.status = filters.status;
     }
 
-    if (filters.ticket_id) {
-        whereClause.ticket_id = filters.ticket_id;
+    if (filters.issue_id) {
+        whereClause.issue_id = filters.issue_id;
     }
 
     return await this.findAll({

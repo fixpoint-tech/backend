@@ -7,7 +7,7 @@ import PettyCashRequest from '../models/pettyCashRequest.js';
 
 /**
  * Get all cash requests with optional filtering
- * @param {Object} filters - Optional filters (technician_id, status, ticket_id)
+ * @param {Object} filters - Optional filters (technician_id, status, issue_id)
  * @returns {Promise<Array>} Array of cash requests
  */
 export const getAllCashRequests = async (filters = {}) => {
@@ -41,10 +41,10 @@ export const getCashRequestById = async (id) => {
 export const createCashRequest = async (cashRequestData) => {
     try {
         // Validate required fields
-        const { technician_id, ticket_id, amount, description } = cashRequestData;
+        const { technician_id, issue_id, amount, description } = cashRequestData;
 
-        if (!technician_id || !ticket_id || !amount || !description) {
-            throw new Error('Missing required fields: technician_id, ticket_id, amount, description');
+        if (!technician_id || !issue_id || !amount || !description) {
+            throw new Error('Missing required fields: technician_id, issue_id, amount, description');
         }
 
         // Validate amount is positive

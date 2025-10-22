@@ -13,6 +13,11 @@ const Issue = sequelize.define('Issue', {
   branch_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Branches',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
     validate: {
       notNull: {
         msg: 'Branch ID is required'
@@ -38,15 +43,20 @@ const Issue = sequelize.define('Issue', {
       }
     }
   },
-  userid: {
+  manager_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'BranchManagers',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
     validate: {
       notNull: {
-        msg: 'User ID is required'
+        msg: 'manager ID is required'
       },
       isInt: {
-        msg: 'User ID must be an integer'
+        msg: 'manager ID must be an integer'
       }
     }
   },
@@ -59,8 +69,75 @@ const Issue = sequelize.define('Issue', {
         msg: 'Description cannot exceed 5000 characters'
       }
     }
+  },
+  maintenance_executive_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'MaintenanceExecutives',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    validate: {
+      isInt: {
+        msg: 'Maintenance Executive ID must be an integer'
+      }
+    }
+  },
+  technician_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Technicians',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    validate: {
+      isInt: {
+        msg: 'Technician ID must be an integer'
+      }
+    }
+  },
+  status: {
+    type: DataTypes.ENUM('Open', 'In Progress', 'Done', 'Closed'),
+    allowNull: false,
+    defaultValue: 'Open',
+    validate: {
+      isIn: {
+        args: [['Open', 'In Progress', 'Done', 'Closed']],
+        msg: 'Status must be one of: Open, In Progress, Done, Closed'
+      }
+    }
+  },
+  third_party_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'ThirdParties',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'SET NULL',
+    validate: {
+      isInt: {
+        msg: 'Third Party ID must be an integer'
+      }
+    }
+  },
+  technician_assigned_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  maintenance_executive_assigned_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  third_party_assigned_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
-}, {
+},
+{
   tableName: 'Issues',
   timestamps: true, // This will automatically add createdAt and updatedAt
   indexes: [
@@ -68,7 +145,19 @@ const Issue = sequelize.define('Issue', {
       fields: ['branch_id']
     },
     {
-      fields: ['userid']
+      fields: ['manager_id']
+    },
+    {
+      fields: ['maintenance_executive_id']
+    },
+    {
+      fields: ['technician_id']
+    },
+    {
+      fields: ['status']
+    },
+    {
+      fields: ['third_party_id']
     }
   ]
 });

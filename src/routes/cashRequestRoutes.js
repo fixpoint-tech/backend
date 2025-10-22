@@ -9,7 +9,7 @@ import {
     approveCashRequest,
     rejectCashRequest,
     getTechnicianStats,
-    getCashRequestsByTicketId
+    getCashRequestsByIssueId
 } from '../controllers/cashRequestController.js';
 
 const router = express.Router();
@@ -33,11 +33,11 @@ const createCashRequestValidation = [
         .withMessage('technician_id is required')
         .isInt({ min: 1 })
         .withMessage('technician_id must be a valid positive integer'),
-    body('ticket_id')
+    body('issue_id')
         .notEmpty()
-        .withMessage('ticket_id is required')
+        .withMessage('issue_id is required')
         .isInt({ min: 1 })
-        .withMessage('ticket_id must be a valid positive integer'),
+        .withMessage('issue_id must be a valid positive integer'),
     body('amount')
         .notEmpty()
         .withMessage('amount is required')
@@ -68,7 +68,7 @@ const updateCashRequestValidation = [
 ];
 
 router.get('/', getAllCashRequests);
-router.get('/by-ticket/:ticket_id', validateId('ticket_id'), getCashRequestsByTicketId);
+router.get('/by-issue/:issue_id', validateId('issue_id'), getCashRequestsByIssueId);
 router.get('/stats/:technician_id', validateId('technician_id'), getTechnicianStats);
 router.get('/:id', validateUUID('id'), getCashRequestById);
 router.post('/', createCashRequestValidation, createCashRequest);

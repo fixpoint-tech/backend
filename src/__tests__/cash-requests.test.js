@@ -7,7 +7,7 @@ const BASE_URL = 'http://localhost:5000/api/v1/cash-requests';
 // Sample test data
 const sampleCashRequest = {
     technician_id: 1,
-    ticket_id: 1,
+    issue_id: 1,
     amount: 150.00,
     description: 'Spare parts for refrigerator repair including compressor relay and thermostat'
 };
@@ -121,7 +121,7 @@ async function runTests() {
 
     // Test 7.5: Get Cash Requests by Ticket ID
     console.log('\n7.5️⃣  Getting cash requests by ticket ID...');
-    const getByTicketResult = await testRequest('GET', `${BASE_URL}/by-ticket?ticket_id=${sampleCashRequest.ticket_id}`);
+    const getByTicketResult = await testRequest('GET', `${BASE_URL}/by-ticket?issue_id=${sampleCashRequest.ticket_id}`);
     if (getByTicketResult.data && getByTicketResult.data.success) {
         console.log('✅ Retrieved', getByTicketResult.data.count, 'cash request(s) for ticket');
     } else {
@@ -130,7 +130,7 @@ async function runTests() {
 
     // Test 7.6: Get Cash Requests by Ticket ID (non-existent)
     console.log('\n7.6️⃣  Testing filtering by non-existent ticket ID...');
-    const getByTicketEmptyResult = await testRequest('GET', `${BASE_URL}/by-ticket?ticket_id=99999`);
+    const getByTicketEmptyResult = await testRequest('GET', `${BASE_URL}/by-ticket?issue_id=99999`);
     if (getByTicketEmptyResult.data && getByTicketEmptyResult.data.success && getByTicketEmptyResult.data.count === 0) {
         console.log('✅ Correctly returned empty results for non-existent ticket');
     } else {
