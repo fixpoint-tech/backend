@@ -28,9 +28,24 @@ export const setupSocket = (server) => {
     //         next(new Error("Invalid token"));
     //     }
     // });
+    let userID = 1; // temp for testing
+    let role = "technician"; // temp for testing
+
 
     newIssue.on("connection", async (socket) => {
+        // testing without auth
+        role = "maintenance_executive";
+
+        if (role !== "maintenance_executive") {
+            console.log(`Non-ME tried to connect to new-issue namespace: ${socket.id}`);
+            socket.disconnect();
+            return;
+        }
         console.log(`User connected(new-issue) with socket ${socket.id}`);
+
+        socket.on("send_message", (message) => {
+            console.log(message);
+        });
 
         socket.on("disconnect", () => {
             console.log(`User disconnected: ${socket.id}`);
@@ -38,7 +53,21 @@ export const setupSocket = (server) => {
     });
 
     assign.on("connection", async (socket) => {
-        console.log(`User connected with socket ${socket.id}`);
+        // testing without auth
+        role = "technician";
+
+        if (role !== "technician") {
+            console.log(`Non-technician tried to connect to assign namespace: ${socket.id}`);
+            socket.disconnect();
+            return;
+        }
+        const room = `technician:${userID}`;
+        socket.join(room);
+        console.log(`Technician ${userID} joined room: ${room} with socket ${socket.id}`);
+
+        socket.on("send_message", (message) => {
+            console.log(message);
+        });
 
         socket.on("disconnect", () => {
             console.log(`User disconnected: ${socket.id}`);
@@ -55,5 +84,15 @@ export function notifyNewIssue(issue) {
         newIssue.emit('new_issue', issue);
     } catch (err) {
         console.error('notifyNewIssue error:', err);
+    }
+}
+
+export function notifyAssign(id,issue) {
+    if (!assign) return;
+    try {
+        const room = `technician:${id}`;
+        assign.to(room).emit('assigned_issue', issue);
+    } catch (err) {
+        console.error('notifyAssign error:', err);
     }
 }

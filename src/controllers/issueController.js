@@ -1,5 +1,5 @@
 import issueService from '../services/issueService.js';
-import { notifyNewIssue } from '../socket/socket.js';
+import { notifyNewIssue, notifyAssign } from '../socket/socket.js';
 
 class IssueController {
   // POST /api/issues - Create new issue
@@ -224,6 +224,13 @@ class IssueController {
       const result = await issueService.assignTechnician(parseInt(id), parseInt(technician_id));
 
       if (result.success) {
+        // broadcast assignment to the assigned technician (real-time)
+        try {
+          notifyAssign(parseInt(technician_id), result);
+        } catch (emitErr) {
+          console.error('notifyAssign failed:', emitErr);
+        }
+
         return res.status(200).json(result);
       } else {
         return res.status(400).json(result);
