@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { Server } from "socket.io";
+import messageService from '../services/messageService.js';
 import jwt from "jsonwebtoken";
 
 let ioInstance = null;
@@ -126,9 +127,19 @@ export function makeDynamicNamespace(issueId) {
             socket.to(issueRoom).emit("receive_message", message);
         });
 
-        socket.on("send_message_to_user", (message, receiverId) => {
+        socket.on("send_message_to_user", async (message, receiverId) => {
             console.log(message);
             socket.to(`user:${receiverId}`).emit("receive_message", message);
+            try {
+                await messageService.createMessage({
+                    body: message.text,
+                    sender_id: userId,
+                    receiver_id: receiverId,
+                    issue_id: issueId,
+                });
+            } catch (err) {
+                console.error('createMessage error:', err);
+            }
         });
 
         socket.on("disconnect", () => {
