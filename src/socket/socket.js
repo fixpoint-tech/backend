@@ -28,7 +28,7 @@ export const setupSocket = (server) => {
     //         next(new Error("Invalid token"));
     //     }
     // });
-    let userID = 1; // temp for testing
+    let roleSpecificID = 1; // temp for testing
     let role = "technician"; // temp for testing
 
 
@@ -61,9 +61,9 @@ export const setupSocket = (server) => {
             socket.disconnect();
             return;
         }
-        const room = `technician:${userID}`;
+        const room = `technician:${roleSpecificID}`;
         socket.join(room);
-        console.log(`Technician ${userID} joined room: ${room} with socket ${socket.id}`);
+        console.log(`Technician ${roleSpecificID} joined room: ${room} with socket ${socket.id}`);
 
         socket.on("send_message", (message) => {
             console.log(message);
@@ -87,6 +87,7 @@ export function notifyNewIssue(issue) {
     }
 }
 
+//Emit an assigned_issue event to a specific technician in the /assign namespace.
 export function notifyAssign(id,issue) {
     if (!assign) return;
     try {
@@ -95,4 +96,45 @@ export function notifyAssign(id,issue) {
     } catch (err) {
         console.error('notifyAssign error:', err);
     }
+}
+
+export function makeDynamicNamespace(issueId) {
+    console.log(`makeDynamicNamespace for issueId: ${issueId}`);
+    if (!ioInstance) return null;
+
+    const dynamicNamespace = ioInstance.of(`/issue-${issueId}`);
+
+    dynamicNamespace.on("connection", (socket) => {
+
+        // For testing without auth
+        const userId = socket.handshake?.auth?.userId || socket.handshake?.query?.userId || socket.data?.userId || socket.id;
+
+        console.log(`User connected to /issue-${issueId} with socket ${socket.id}`);
+
+        // room for all users in this issue
+        const issueRoom = `issue:${issueId}`;
+        socket.join(issueRoom);
+        console.log(`User ${userId} joined room: ${issueRoom}`);
+
+        // personal room for user
+        const userRoom = `user:${userId}`;
+        socket.join(userRoom);
+        console.log(`User ${userId} joined room: ${userRoom}`);
+
+        socket.on("send_message_to_all", (message) => {
+            console.log(message);
+            socket.to(issueRoom).emit("receive_message", message);
+        });
+
+        socket.on("send_message_to_user", (message, receiverId) => {
+            console.log(message);
+            socket.to(`user:${receiverId}`).emit("receive_message", message);
+        });
+
+        socket.on("disconnect", () => {
+            console.log(`User disconnected: ${socket.id}`);
+        });
+    });
+
+    return dynamicNamespace;
 }

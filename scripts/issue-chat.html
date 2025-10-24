@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Issue Namespace Chat (test)</title>
+  <style>
+    body{font-family:system-ui, -apple-system,Segoe UI, Roboto, "Helvetica Neue", Arial;margin:20px}
+    input,button,select{padding:8px;margin:4px}
+    #messages{border:1px solid #ddd;padding:8px;height:300px;overflow:auto;background:#fafafa}
+    .msg{padding:6px;border-bottom:1px solid #eee}
+    .meta{font-size:0.85em;color:#666}
+  </style>
+</head>
+<body>
+  <h2>Issue Namespace Chat — Test Page</h2>
+  <div>
+    <label>Server URL: <input id="serverUrl" value="http://localhost:5050" size="30"></label>
+    <label>Issue ID: <input id="issueId" value="30" size="6"></label>
+    <label>User ID: <input id="userId" value="1" size="6"></label>
+    <label>Role: <input id="role" value="building_manager" size="14"></label>
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+  </div>
+
+  <hr>
+  <div id="status">Not connected</div>
+
+  <div style="margin-top:10px">
+    <div id="messages"></div>
+  </div>
+
+  <div style="margin-top:10px">
+    <input id="messageText" placeholder="Message text" size="60">
+    <button id="sendAllBtn" disabled>Send to all (issue)</button>
+    <input id="targetUser" placeholder="target user id" size="6">
+    <button id="sendUserBtn" disabled>Send to user</button>
+  </div>
+
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script>
+    let socket = null;
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const serverUrlInput = document.getElementById('serverUrl');
+    const issueIdInput = document.getElementById('issueId');
+    const userIdInput = document.getElementById('userId');
+    const roleInput = document.getElementById('role');
+    const messagesEl = document.getElementById('messages');
+    const statusEl = document.getElementById('status');
+    const sendAllBtn = document.getElementById('sendAllBtn');
+    const sendUserBtn = document.getElementById('sendUserBtn');
+    const messageText = document.getElementById('messageText');
+    const targetUser = document.getElementById('targetUser');
+
+    function appendMessage(text, meta) {
+      const div = document.createElement('div');
+      div.className = 'msg';
+      div.innerHTML = '<div>' + text + '</div>' + (meta ? ('<div class="meta">' + meta + '</div>') : '');
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    connectBtn.addEventListener('click', () => {
+      if (socket) return;
+      const server = serverUrlInput.value.trim();
+      const issueId = issueIdInput.value.trim();
+      const userId = userIdInput.value.trim();
+      const role = roleInput.value.trim() || 'user';
+
+      if (!server || !issueId) { alert('server and issue id required'); return }
+
+      const namespace = '/issue-' + issueId;
+      const url = server + namespace;
+
+      appendMessage('Connecting to ' + url + ' as user ' + userId);
+      statusEl.textContent = 'Connecting...';
+
+      socket = io(url, {
+        auth: { userId: String(userId), role }
+      });
+
+      socket.on('connect', () => {
+        appendMessage('Connected (socket id: ' + socket.id + ')');
+        statusEl.textContent = 'Connected: ' + socket.id;
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        sendAllBtn.disabled = false;
+        sendUserBtn.disabled = false;
+      });
+
+      socket.on('receive_message', (msg) => {
+        appendMessage(JSON.stringify(msg), 'received');
+      });
+
+      socket.on('disconnect', (reason) => {
+        appendMessage('Disconnected: ' + reason);
+        statusEl.textContent = 'Disconnected';
+        socket = null;
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        sendAllBtn.disabled = true;
+        sendUserBtn.disabled = true;
+      });
+
+      socket.on('connect_error', (err) => {
+        appendMessage('Connect error: ' + err.message, 'error');
+        statusEl.textContent = 'Connect error';
+      });
+
+    });
+
+    disconnectBtn.addEventListener('click', () => {
+      if (!socket) return;
+      socket.disconnect();
+      socket = null;
+      connectBtn.disabled = false;
+      disconnectBtn.disabled = true;
+      sendAllBtn.disabled = true;
+      sendUserBtn.disabled = true;
+    });
+
+    sendAllBtn.addEventListener('click', () => {
+      if (!socket) return alert('Not connected');
+      const text = messageText.value.trim();
+      if (!text) return;
+      const payload = { text, from: userIdInput.value };
+      // server expects "send_message_to_all"
+      socket.emit('send_message_to_all', payload);
+      appendMessage(JSON.stringify(payload), 'sent to all');
+      messageText.value = '';
+    });
+
+    sendUserBtn.addEventListener('click', () => {
+      if (!socket) return alert('Not connected');
+      const text = messageText.value.trim();
+      const to = targetUser.value.trim();
+      if (!text || !to) return alert('message and target user id required');
+      const payload = { text, from: userIdInput.value, to };
+      // send both forms: message object and receiverId as second arg (server supports both patterns)
+      socket.emit('send_message_to_user', payload, to);
+      appendMessage(JSON.stringify(payload), 'sent to user ' + to);
+      messageText.value = '';
+    });
+
+  </script>
+</body>
+</html>

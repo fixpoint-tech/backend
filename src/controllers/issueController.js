@@ -1,5 +1,5 @@
 import issueService from '../services/issueService.js';
-import { notifyNewIssue, notifyAssign } from '../socket/socket.js';
+import { notifyNewIssue, notifyAssign, makeDynamicNamespace } from '../socket/socket.js';
 
 class IssueController {
   // POST /api/issues - Create new issue
@@ -50,6 +50,13 @@ class IssueController {
       if (result.success) {
         // Notify all Maintenance Executives about the new issue(real-time)
         try { notifyNewIssue(result); } catch (e) { console.error(e);}
+
+        try {
+          // Create dynamic namespaces for real-time communication
+          makeDynamicNamespace(result.data.id);
+        } catch (nsErr) {
+          console.error('makeDynamicNamespace failed:', nsErr);
+        }
 
         return res.status(201).json(result);
       } else {
