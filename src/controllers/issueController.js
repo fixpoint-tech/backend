@@ -1,4 +1,5 @@
 import issueService from '../services/issueService.js';
+import { notifyNewIssue } from '../socket/socket.js';
 
 class IssueController {
   // POST /api/issues - Create new issue
@@ -47,6 +48,9 @@ class IssueController {
       const result = await issueService.createIssue(issueData);
 
       if (result.success) {
+        // Notify all Maintenance Executives about the new issue(real-time)
+        try { notifyNewIssue(result); } catch (e) { console.error(e);}
+
         return res.status(201).json(result);
       } else {
         return res.status(400).json(result);
