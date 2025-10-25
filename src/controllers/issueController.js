@@ -1,5 +1,5 @@
 import issueService from '../services/issueService.js';
-import { notifyNewIssue, notifyAssign, makeDynamicNamespace } from '../socket/socket.js';
+import { notifyNewIssue, notifyAssign, makeDynamicNamespace, issueRealtimeUpdate } from '../socket/socket.js';
 
 class IssueController {
   // POST /api/issues - Create new issue
@@ -166,6 +166,13 @@ class IssueController {
 
       const result = await issueService.updateIssue(parseInt(id), updateData);
 
+      try {
+        // Notify via realtime update that the issue has been updated
+        issueRealtimeUpdate(result.data.id, result);
+      } catch (err) {
+        console.error('issueRealtimeUpdate error after updating issue:', err);
+      }
+
       if (result.success) {
         return res.status(200).json(result);
       } else {
@@ -231,6 +238,13 @@ class IssueController {
       const result = await issueService.assignTechnician(parseInt(id), parseInt(technician_id));
 
       if (result.success) {
+        // Notify via realtime update that the technician has been assigned
+        try {
+          issueRealtimeUpdate(parseInt(id), result);
+        } catch (emitErr) {
+          console.error('issueRealtimeUpdate failed:', emitErr);
+        }
+
         // broadcast assignment to the assigned technician (real-time)
         try {
           notifyAssign(parseInt(technician_id), result);
@@ -274,6 +288,13 @@ class IssueController {
       const result = await issueService.assignMaintenanceExecutive(parseInt(id), parseInt(maintenance_executive_id));
 
       if (result.success) {
+        // Notify via realtime update that the maintenance executive has been assigned
+        try {
+          issueRealtimeUpdate(parseInt(id), result);
+        } catch (emitErr) {
+          console.error('issueRealtimeUpdate failed:', emitErr);
+        }
+
         return res.status(200).json(result);
       } else {
         return res.status(400).json(result);
@@ -310,6 +331,13 @@ class IssueController {
       const result = await issueService.assignThirdParty(parseInt(id), parseInt(third_party_id));
 
       if (result.success) {
+        // Notify via realtime update that the third party has been assigned
+        try {
+          issueRealtimeUpdate(parseInt(id), result);
+        } catch (emitErr) {
+          console.error('issueRealtimeUpdate failed:', emitErr);
+        }
+
         return res.status(200).json(result);
       } else {
         return res.status(400).json(result);
@@ -354,6 +382,12 @@ class IssueController {
       const result = await issueService.updateStatus(parseInt(id), status);
 
       if (result.success) {
+        // Notify via realtime update that the issue status has been updated
+        try {
+          issueRealtimeUpdate(parseInt(id), result);
+        } catch (emitErr) {
+          console.error('issueRealtimeUpdate failed:', emitErr);
+        }
         return res.status(200).json(result);
       } else {
         return res.status(400).json(result);

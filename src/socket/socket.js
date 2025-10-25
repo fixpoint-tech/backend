@@ -99,10 +99,11 @@ export function notifyAssign(id,issue) {
     }
 }
 
+// Create a dynamic namespace for a specific issue ID
 export function makeDynamicNamespace(issueId) {
-    console.log(`makeDynamicNamespace for issueId: ${issueId}`);
     if (!ioInstance) return null;
 
+    console.log(`makeDynamicNamespace for issueId: ${issueId}`);
     const dynamicNamespace = ioInstance.of(`/issue-${issueId}`);
 
     dynamicNamespace.on("connection", (socket) => {
@@ -148,4 +149,15 @@ export function makeDynamicNamespace(issueId) {
     });
 
     return dynamicNamespace;
+}
+
+// Emit an issue_update event to all clients connected to the /issue-<id> namespace.
+export function issueRealtimeUpdate(issueId, issueData) {
+    if (!ioInstance) return;
+    try {
+        const namespace = ioInstance.of(`/issue-${issueId}`);
+        namespace.emit('issue_update', issueData);
+    } catch (err) {
+        console.error('issueRealtimeUpdate error:', err);
+    }
 }

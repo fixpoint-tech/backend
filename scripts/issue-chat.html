@@ -93,6 +93,11 @@
         appendMessage(JSON.stringify(msg), 'received');
       });
 
+      // Listen for issue realtime updates (emitted by server via issueRealtimeUpdate)
+      socket.on('issue_update', (update) => {
+        appendMessage(JSON.stringify(update), 'issue_update');
+      });
+
       socket.on('disconnect', (reason) => {
         appendMessage('Disconnected: ' + reason);
         statusEl.textContent = 'Disconnected';
