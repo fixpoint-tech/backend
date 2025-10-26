@@ -149,11 +149,13 @@ class TechnicianController {
         }
       }
 
-      const { name, phone, ...profileData } = req.body;
+      // 👇 now includes email support
+      const { name, phone, email, ...profileData } = req.body;
       
       const userData = {};
       if (name !== undefined) userData.name = name;
       if (phone !== undefined) userData.phone = phone;
+      if (email !== undefined) userData.email = email;
       if (profilePictureUrl !== undefined) userData.profilePicture = profilePictureUrl;
 
       const updatedTechnician = await userService.updateUser(req.params.id, userData, profileData);

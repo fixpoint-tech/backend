@@ -47,7 +47,10 @@ export const validateCreateUser = [
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters'),
 
-  body('profilePicture').optional().isURL().withMessage('Profile picture must be a valid URL'),
+  body('profilePicture')
+    .optional()
+    .isURL()
+    .withMessage('Profile picture must be a valid URL'),
 
   handleValidationErrors
 ];
@@ -73,10 +76,20 @@ export const validateUpdateUser = [
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters'),
 
-  body('profilePicture').optional().isURL().withMessage('Profile picture must be a valid URL'),
+  body('profilePicture')
+    .optional()
+    .isURL()
+    .withMessage('Profile picture must be a valid URL'),
 
-  // Don't allow these fields to be updated
-  body('email').not().exists().withMessage('Email cannot be updated'),
+  // ✅ Allow updating email, with validation
+  body('email')
+    .optional()
+    .trim()
+    .isEmail()
+    .withMessage('Must be a valid email address')
+    .normalizeEmail(),
+
+  // ❌ Still restrict these fields
   body('role').not().exists().withMessage('Role cannot be updated'),
   body('isActive').not().exists().withMessage('isActive cannot be updated'),
 
@@ -87,8 +100,9 @@ export const validateUpdateUser = [
  * Validation for user ID parameter
  */
 export const validateUserId = [
-  param('id').isInt({ min: 1 }).withMessage('User ID must be a positive integer'),
-
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('User ID must be a positive integer'),
   handleValidationErrors
 ];
 
@@ -184,7 +198,8 @@ export const validateUpdateThirdParty = [
  * Validation for third party ID parameter
  */
 export const validateThirdPartyId = [
-  param('id').isInt({ min: 1 }).withMessage('Third party ID must be a positive integer'),
-
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Third party ID must be a positive integer'),
   handleValidationErrors
 ];
