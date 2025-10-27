@@ -149,11 +149,13 @@ class BranchManagerController {
         }
       }
 
-      const { name, phone, ...profileData } = req.body;
+      // ✅ Allow updating email along with name and phone
+      const { name, phone, email, ...profileData } = req.body;
       
       const userData = {};
       if (name !== undefined) userData.name = name;
       if (phone !== undefined) userData.phone = phone;
+      if (email !== undefined) userData.email = email;
       if (profilePictureUrl !== undefined) userData.profilePicture = profilePictureUrl;
 
       const updatedBranchManager = await userService.updateUser(req.params.id, userData, profileData);

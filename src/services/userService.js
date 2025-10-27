@@ -174,9 +174,9 @@ class UserService {
         throw new Error('User not found');
       }
 
-      // Don't allow role or email updates through regular update
+      // Don't allow role or isActive updates through regular update
       delete updateData.role;
-      delete updateData.email;
+      // delete updateData.email;  <-- REMOVED this line so email can be updated
       delete updateData.isActive;
 
       // Update base user if there's data
