@@ -1,3 +1,4 @@
+import { issueRealtimeUpdate } from '../socket/socket.js';
 /**
  * Cash Request Controller
  * Handles HTTP requests for petty cash requests
@@ -110,6 +111,13 @@ export const createCashRequest = async (req, res) => {
             description
         });
 
+        try {
+            // Notify via realtime update that a new cash request has been created for the issue
+            issueRealtimeUpdate(issue_id, newCashRequest);
+        } catch (err) {
+            console.error('issueRealtimeUpdate error after creating cash request:', err);
+        }
+
         res.status(201).json({
             success: true,
             message: 'Petty cash request created successfully',
@@ -160,6 +168,13 @@ export const updateCashRequest = async (req, res) => {
         }
 
         const updatedCashRequest = await CashRequestService.updateCashRequest(id, updateData);
+
+        try {
+            // Notify via realtime update that the cash request has been updated
+            issueRealtimeUpdate(updatedCashRequest.issue_id, updatedCashRequest);
+        } catch (err) {
+            console.error('issueRealtimeUpdate error after updating cash request:', err);
+        }
 
         if (!updatedCashRequest) {
             return res.status(404).json({
@@ -226,6 +241,13 @@ export const approveCashRequest = async (req, res) => {
 
         const approvedRequest = await CashRequestService.approveCashRequest(id);
 
+        try {
+            // Notify via realtime update that the cash request has been approved
+            issueRealtimeUpdate(approvedRequest.issue_id, approvedRequest);
+        } catch (err) {
+            console.error('issueRealtimeUpdate error after approving cash request:', err);
+        }
+
         if (!approvedRequest) {
             return res.status(404).json({
                 success: false,
@@ -264,6 +286,13 @@ export const rejectCashRequest = async (req, res) => {
                 success: false,
                 message: 'Cash request not found'
             });
+        }
+
+        try {
+            // Notify via realtime update that the cash request has been rejected
+            issueRealtimeUpdate(rejectedRequest.issue_id, rejectedRequest);
+        } catch (err) {
+            console.error('issueRealtimeUpdate error after rejecting cash request:', err);
         }
 
         res.status(200).json({
