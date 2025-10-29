@@ -388,15 +388,18 @@ class IssueController {
       const result = await issueService.updateStatus(parseInt(id), status);
 
       if (result.success) {
-        // Notify via realtime update that the issue status has been updated
+        // Notify via realtime update that the issue status has been updated (in chat interface)
         try {
           issueRealtimeUpdate(parseInt(id), result);
         } catch (emitErr) {
           console.error('issueRealtimeUpdate failed:', emitErr);
         }
 
-        // Notify all users about the issue status update(real-time)
+        // Notify Maintenance Executives about the issue status update(real-time in home dashboard)
         try { notifyNewIssue(result); } catch (e) { console.error(e);}
+
+        // Notify assigned technician about the issue status update(real-time in home dashboard)
+        try { notifyAssign(result.data.technician_id, result); } catch (e) { console.error(e);}
 
         // Remove all connections and delete the namespace for the issue
         if (result.data.status === 'Closed' || result.data.status === 'Done') {

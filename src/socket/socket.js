@@ -29,7 +29,7 @@ export const setupSocket = (server) => {
     //         next(new Error("Invalid token"));
     //     }
     // });
-    let roleSpecificID = 1; // temp for testing
+    let roleSpecificID = 3; // temp for testing
     let role = "technician"; // temp for testing
 
 
