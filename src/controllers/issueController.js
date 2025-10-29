@@ -1,5 +1,5 @@
 import issueService from '../services/issueService.js';
-import { notifyNewIssue, notifyAssign, makeDynamicNamespace, issueRealtimeUpdate } from '../socket/socket.js';
+import { notifyNewIssue, notifyAssign, makeDynamicNamespace, issueRealtimeUpdate, removeDynamicNamespace } from '../socket/socket.js';
 
 class IssueController {
   // POST /api/issues - Create new issue
@@ -173,6 +173,7 @@ class IssueController {
         console.error('issueRealtimeUpdate error after updating issue:', err);
       }
 
+
       if (result.success) {
         return res.status(200).json(result);
       } else {
@@ -202,6 +203,8 @@ class IssueController {
       const result = await issueService.deleteIssue(parseInt(id));
 
       if (result.success) {
+        // Remove all connections and delete the namespace for the issue
+        removeDynamicNamespace(parseInt(id));
         return res.status(200).json(result);
       } else {
         return res.status(404).json(result);
@@ -294,6 +297,9 @@ class IssueController {
         } catch (emitErr) {
           console.error('issueRealtimeUpdate failed:', emitErr);
         }
+
+        // Notify all Maintenance Executives about the new issue(real-time) update with assigned ME
+        try { notifyNewIssue(result); } catch (e) { console.error(e);}
 
         return res.status(200).json(result);
       } else {
@@ -388,6 +394,15 @@ class IssueController {
         } catch (emitErr) {
           console.error('issueRealtimeUpdate failed:', emitErr);
         }
+
+        // Notify all users about the issue status update(real-time)
+        try { notifyNewIssue(result); } catch (e) { console.error(e);}
+
+        // Remove all connections and delete the namespace for the issue
+        if (result.data.status === 'Closed' || result.data.status === 'Done') {
+          removeDynamicNamespace(result.data.id);
+        }
+
         return res.status(200).json(result);
       } else {
         return res.status(400).json(result);

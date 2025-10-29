@@ -151,6 +151,38 @@ export function makeDynamicNamespace(issueId) {
     return dynamicNamespace;
 }
 
+export function removeDynamicNamespace(issueId) {
+    if (!ioInstance) return;
+    
+    try {
+        const namespaceName = `/issue-${issueId}`;
+        const namespace = ioInstance.of(namespaceName);
+        
+        console.log(`Removing dynamic namespace: ${namespaceName}`);
+        
+        // Get all sockets in the namespace and disconnect them
+        namespace.fetchSockets().then((sockets) => {
+            sockets.forEach((socket) => {
+                console.log(`Disconnecting socket ${socket.id} from namespace ${namespaceName}`);
+                socket.disconnect(true);
+            });
+            
+            // Remove all listeners from the namespace
+            namespace.removeAllListeners();
+            
+            // Delete the namespace from the server
+            ioInstance._nsps.delete(namespaceName);
+            
+            console.log(`Dynamic namespace ${namespaceName} removed successfully`);
+        }).catch((err) => {
+            console.error(`Error removing namespace ${namespaceName}:`, err);
+        });
+        
+    } catch (err) {
+        console.error('removeDynamicNamespace error:', err);
+    }
+}
+
 // Emit an issue_update event to all clients connected to the /issue-<id> namespace.
 export function issueRealtimeUpdate(issueId, issueData) {
     if (!ioInstance) return;
