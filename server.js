@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import http from "http";
+import cors from 'cors'; // Added CORS import
 import { initializeDatabase, initializeStorage } from './src/services/connectionService.js';
 import healthRoutes from './src/routes/health.js';
 import { setupSocket } from './src/socket/socket.js';
@@ -14,6 +15,8 @@ import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
 const app = express();
 const server = http.createServer(app);
 
+// Enable CORS (this is the only new middleware)
+app.use(cors());
 
 //Socket.io
 setupSocket(server);
@@ -76,4 +79,4 @@ async function startServer() {
 }
 
 // Start the server
-  startServer();
+startServer();
