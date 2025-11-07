@@ -1,8 +1,8 @@
 import express from 'express';
 import { dataDrivenAHP } from '../controllers/ahpController.js';
 
-const ahpRouter = express.Router();
+const router = express.Router();
 
-ahpRouter.post('/ahp', dataDrivenAHP)
+router.post('/', dataDrivenAHP)
 
-export default ahpRouter;
+export default router;
