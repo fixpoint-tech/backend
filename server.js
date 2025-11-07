@@ -1,12 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
 import http from "http";
+import cors from 'cors';
 import { initializeDatabase, initializeStorage } from './src/services/connectionService.js';
 import healthRoutes from './src/routes/health.js';
 import { setupSocket } from './src/socket/socket.js';
 import issueRoutes from './src/routes/issues.js';
 import userRoutes from './src/routes/users.js';
-import messageRoutes from './src/routes/messages.js'; 
+import messageRoutes from './src/routes/messages.js';
 import branchRoutes from './src/routes/branch.js';
 import thirdPartiesRoutes from './src/routes/thirdparties.js';
 import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
@@ -21,6 +22,9 @@ setupSocket(server);
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Enable CORS
+app.use(cors({ origin: '*' }));
 
 // Middleware
 app.use(express.json()); // Parse JSON request bodies
@@ -60,8 +64,8 @@ async function startServer() {
     console.log('Initializing MinIO storage...');
     await initializeStorage();
 
-    // Start the server
-    server.listen(PORT, () => {
+    // Start server
+    server.listen(PORT, '127.0.0.1', () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Server URL: http://localhost:${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);
@@ -76,4 +80,4 @@ async function startServer() {
 }
 
 // Start the server
-  startServer();
+startServer();
