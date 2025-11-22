@@ -65,7 +65,7 @@ async function startServer() {
     await initializeStorage();
 
     // Start server
-    server.listen(PORT, '127.0.0.1', () => {
+    server.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Server URL: http://localhost:${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);
