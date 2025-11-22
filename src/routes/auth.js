@@ -10,6 +10,117 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 /**
+ * @route   POST /api/v1/auth/register
+ * @desc    Register a new user
+ * @access  Public
+ */
+router.post('/register', async (req, res) => {
+    try {
+        const { email, password, name, role } = req.body;
+
+        // Validate input
+        if (!email || !password || !name || !role) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email, password, name, and role are required'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid email address'
+            });
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Validate role
+        const validRoles = ['technician', 'branch_manager', 'maintenance_executive'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid role. Must be technician, branch_manager, or maintenance_executive'
+            });
+        }
+
+        // Check if user already exists
+        const existingUser = await userService.getUserByEmail(email);
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: 'User with this email already exists'
+            });
+        }
+
+        // For now, storing plain text password (NOT SECURE!)
+        // In production, hash the password:
+        // const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create user with role-specific profile
+        const userData = {
+            email,
+            password, // In production: use hashedPassword
+            name,
+            role,
+            isActive: true
+        };
+
+        // Role-specific profile data (can be extended)
+        const profileData = {};
+
+        const newUser = await userService.createUser(userData, profileData);
+
+        // Generate JWT token
+        const token = jwt.sign(
+            {
+                id: newUser.id,
+                email: newUser.email,
+                role: newUser.role
+            },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        // Convert to plain object and remove password
+        const userObject = newUser.get({ plain: true });
+        const { password: _, ...userWithoutPassword } = userObject;
+
+        res.status(201).json({
+            success: true,
+            message: 'Registration successful',
+            token,
+            data: userWithoutPassword
+        });
+
+    } catch (error) {
+        console.error('Registration error:', error);
+
+        // Handle unique constraint errors
+        if (error.message.includes('already exists')) {
+            return res.status(409).json({
+                success: false,
+                message: error.message
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Registration failed. Please try again.'
+        });
+    }
+});
+
+
+/**
  * @route   POST /api/v1/auth/login
  * @desc    Login user and return JWT token
  * @access  Public
