@@ -238,6 +238,132 @@ router.get('/me', authenticateToken, async (req, res) => {
 });
 
 /**
+ * @route   POST /api/v1/auth/forgot-password
+ * @desc    Initiate password reset process (generate reset token)
+ * @access  Public
+ */
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validate input
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+
+        // Find user by email
+        const user = await userService.getUserByEmail(email);
+
+        // Don't reveal if user exists or not (security best practice)
+        if (!user) {
+            return res.status(200).json({
+                success: true,
+                message: 'If an account exists with this email, a password reset link has been sent.'
+            });
+        }
+
+        // Generate a password reset token (valid for 1 hour)
+        const resetToken = jwt.sign(
+            { id: user.id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // In a production app, you would:
+        // 1. Save this token to the database with an expiry time
+        // 2. Send an email with a reset link containing the token
+        // For now, we'll return the token directly (for demo purposes)
+
+        // TODO: Send email with reset link
+        // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        // await sendEmail(user.email, 'Password Reset', resetLink);
+
+        res.status(200).json({
+            success: true,
+            message: 'If an account exists with this email, a password reset link has been sent.',
+            // For demo: return token (remove in production!)
+            resetToken: resetToken
+        });
+
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process password reset request'
+        });
+    }
+});
+
+/**
+ * @route   POST /api/v1/auth/reset-password
+ * @desc    Reset password using reset token
+ * @access  Public
+ */
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        // Validate input
+        if (!token || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token and new password are required'
+            });
+        }
+
+        // Validate password length
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Verify the reset token
+        let decoded;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch (err) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired reset token'
+            });
+        }
+
+        // Find the user
+        const user = await userService.getUserById(decoded.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password
+        await userService.updateUser(decoded.id, { password: hashedPassword }, {});
+
+        res.status(200).json({
+            success: true,
+            message: 'Password has been reset successfully. You can now login with your new password.'
+        });
+
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reset password'
+        });
+    }
+});
+
+/**
  * Middleware to authenticate JWT token
  */
 function authenticateToken(req, res, next) {
