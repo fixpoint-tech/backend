@@ -11,6 +11,7 @@ import messageRoutes from './src/routes/messages.js';
 import branchRoutes from './src/routes/branch.js';
 import thirdPartiesRoutes from './src/routes/thirdparties.js';
 import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
+import authRoutes from './src/routes/auth.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -26,13 +27,9 @@ app.use(express.urlencoded({ extended: true }));
 // Enable CORS
 app.use(cors({ origin: '*' }));
 
-// Middleware
-app.use(express.json()); // Parse JSON request bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
-
 // Routes
 app.use('/api/health', healthRoutes);
-
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/cash-requests', cashRequestRoutes);
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/users', userRoutes);
