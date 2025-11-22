@@ -5,7 +5,10 @@ import userService from '../services/userService.js';
 
 const router = express.Router();
 
-// JWT secret - in production, this should be in environment variables
+// JWT Configuration from environment variables
+if (!process.env.JWT_SECRET) {
+    console.warn('⚠️  WARNING: JWT_SECRET not set in environment variables. Using default (INSECURE!).');
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
@@ -61,14 +64,13 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        // For now, storing plain text password (NOT SECURE!)
-        // In production, hash the password:
-        // const hashedPassword = await bcrypt.hash(password, 10);
+        // Hash password with bcrypt before storing
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create user with role-specific profile
         const userData = {
             email,
-            password, // In production: use hashedPassword
+            password: hashedPassword,
             name,
             role,
             isActive: true
@@ -155,10 +157,8 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // For now, we're storing plain text passwords in the database (NOT SECURE!)
-        // In production, you should hash passwords with bcrypt
-        // const isPasswordValid = await bcrypt.compare(password, user.password);
-        const isPasswordValid = password === user.password;
+        // Verify password using bcrypt
+        const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
             return res.status(401).json({
