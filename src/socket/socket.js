@@ -159,6 +159,9 @@ export function removeDynamicNamespace(issueId) {
         const namespace = ioInstance.of(namespaceName);
         
         console.log(`Removing dynamic namespace: ${namespaceName}`);
+
+        // Emit issue_update event before disconnecting
+        namespace.emit('issue_update', { status: 'closed', message: 'The issue has been closed.' });
         
         // Get all sockets in the namespace and disconnect them
         namespace.fetchSockets().then((sockets) => {

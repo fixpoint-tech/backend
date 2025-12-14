@@ -12,6 +12,26 @@ if (!process.env.JWT_SECRET) {
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+// Helper: get role-specific profile id (if present) from a user object
+function getRoleSpecificId(user) {
+    if (!user || !user.role) return null;
+
+    // Profiles are included by userService with these aliases
+    if (user.role === 'technician' && user.technicianProfile && user.technicianProfile.id) {
+        return user.technicianProfile.id;
+    }
+
+    if (user.role === 'branch_manager' && user.branchManagerProfile && user.branchManagerProfile.id) {
+        return user.branchManagerProfile.id;
+    }
+
+    if (user.role === 'maintenance_executive' && user.maintenanceExecutiveProfile && user.maintenanceExecutiveProfile.id) {
+        return user.maintenanceExecutiveProfile.id;
+    }
+
+    return null;
+}
+
 /**
  * @route   POST /api/v1/auth/register
  * @desc    Register a new user
@@ -82,11 +102,14 @@ router.post('/register', async (req, res) => {
         const newUser = await userService.createUser(userData, profileData);
 
         // Generate JWT token
+        // include the role-specific profile id in the token as `roleId`
+        const roleSpecificId = getRoleSpecificId(newUser);
         const token = jwt.sign(
             {
                 id: newUser.id,
                 email: newUser.email,
-                role: newUser.role
+                role: newUser.role,
+                roleSpecificId: roleSpecificId
             },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
@@ -168,11 +191,14 @@ router.post('/login', async (req, res) => {
         }
 
         // Generate JWT token
+        // include the role-specific profile id in the token as `roleId`
+        const roleSpecificId = getRoleSpecificId(user);
         const token = jwt.sign(
             {
                 id: user.id,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                roleSpecificId: roleSpecificId
             },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
