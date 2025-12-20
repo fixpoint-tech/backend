@@ -16,10 +16,6 @@ import authRoutes from './src/routes/auth.js';
 const app = express();
 const server = http.createServer(app);
 
-
-//Socket.io
-setupSocket(server);
-
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -60,6 +56,9 @@ async function startServer() {
     // Initialize MinIO storage
     console.log('Initializing MinIO storage...');
     await initializeStorage();
+
+    //Socket.io
+    await setupSocket(server);
 
     // Start server
     server.listen(PORT, () => {
