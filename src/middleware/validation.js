@@ -4,8 +4,12 @@ import { body, param, validationResult } from 'express-validator';
  * Middleware to handle validation errors
  */
 export const handleValidationErrors = (req, res, next) => {
+  console.log('🔍 Validation middleware - Request body:', JSON.stringify(req.body));
+  console.log('🔍 Validation middleware - Request file:', req.file ? req.file.originalname : 'No file');
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('❌ Validation errors:', JSON.stringify(errors.array()));
     return res.status(400).json({
       success: false,
       errors: errors.array().map(err => ({

@@ -6,18 +6,26 @@ import multer from 'multer';
 
 // File filter - only allow images
 const fileFilter = (req, file, cb) => {
+  console.log('Multer file filter - Received file:', {
+    fieldname: file.fieldname,
+    originalname: file.originalname,
+    mimetype: file.mimetype,
+    encoding: file.encoding
+  });
+
   const allowedMimeTypes = [
     'image/jpeg',
     'image/jpg',
     'image/png',
-    'image/gif',
     'image/webp'
   ];
 
   if (allowedMimeTypes.includes(file.mimetype)) {
+    console.log('✅ File type accepted:', file.mimetype);
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+    console.log('❌ File type rejected:', file.mimetype);
+    cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);
   }
 };
 
