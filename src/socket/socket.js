@@ -2,16 +2,37 @@ import 'dotenv/config';
 import { Server } from "socket.io";
 import messageService from '../services/messageService.js';
 import jwt from "jsonwebtoken";
+import Issue from '../models/issue.js';
+import { Op } from 'sequelize';
 
 let ioInstance = null;
 let newIssue = null;
 let assign = null;
 
-export const setupSocket = (server) => {
+export const setupSocket = async (server) => {
     const io = new Server(server, {
         cors: { origin: "*" }
     });
     ioInstance = io;
+
+    // Initialize dynamic namespaces for existing active issues
+    try {
+        const issues = await Issue.findAll({
+            where: {
+                status: {
+                    [Op.or]: ['Open', 'In Progress']
+                }
+            }
+        });
+
+        console.log(`Found ${issues.length} active issues. Creating namespaces...`);
+
+        issues.forEach(issue => {
+            makeDynamicNamespace(issue.id);
+        });
+    } catch (error) {
+        console.error("Error initializing issue namespaces:", error);
+    }
 
     newIssue = io.of("/new-issue"); // the "new-issue" namespace for creating new issues
     assign = io.of("/assign"); // the "assign" namespace for assigning issues
@@ -159,6 +180,9 @@ export function removeDynamicNamespace(issueId) {
         const namespace = ioInstance.of(namespaceName);
         
         console.log(`Removing dynamic namespace: ${namespaceName}`);
+
+        // Emit issue_update event before disconnecting
+        namespace.emit('issue_update', { status: 'closed', message: 'The issue has been closed.' });
         
         // Get all sockets in the namespace and disconnect them
         namespace.fetchSockets().then((sockets) => {

@@ -19,11 +19,11 @@ class UserService {
    */
   async createUser(userData, profileData = {}) {
     const transaction = await sequelize.transaction();
-    
+
     try {
       // Create base user
       const user = await User.create(userData, { transaction });
-      
+
       // Create role-specific profile based on user role
       let profile = null;
       if (userData.role === 'technician') {
@@ -154,6 +154,37 @@ class UserService {
   }
 
   /**
+   * Get user by email (for authentication)
+   * @param {string} email - User email
+   * @returns {Promise<Object>} User object with password included
+   */
+  async getUserByEmail(email) {
+    const user = await User.findOne({
+      where: { email, isActive: true },
+      // Include password for authentication
+      include: [
+        {
+          model: Technician,
+          as: 'technicianProfile',
+          required: false
+        },
+        {
+          model: BranchManager,
+          as: 'branchManagerProfile',
+          required: false
+        },
+        {
+          model: MaintenanceExecutive,
+          as: 'maintenanceExecutiveProfile',
+          required: false
+        }
+      ]
+    });
+
+    return user;
+  }
+
+  /**
    * Update user and/or profile by ID
    * @param {number} userId - User ID
    * @param {Object} updateData - Data to update (user fields)
@@ -162,7 +193,7 @@ class UserService {
    */
   async updateUser(userId, updateData, profileData = {}) {
     const transaction = await sequelize.transaction();
-    
+
     try {
       const user = await User.findOne({
         where: { id: userId, isActive: true },
