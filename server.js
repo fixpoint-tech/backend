@@ -11,6 +11,7 @@ import messageRoutes from './src/routes/messages.js';
 import branchRoutes from './src/routes/branch.js';
 import thirdPartiesRoutes from './src/routes/thirdparties.js';
 import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
+import ahpRoutes from './src/routes/ahpRoutes.js';
 import authRoutes from './src/routes/auth.js';
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/messages', messageRoutes);
 app.use('/api/v1/branches', branchRoutes);
 app.use('/api/v1/thirdparties', thirdPartiesRoutes);
+app.use('/api/v1/ahp', ahpRoutes);
 
 // Basic route
 app.get('/api/', (req, res) => {
