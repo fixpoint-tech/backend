@@ -78,6 +78,16 @@ const User = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
+    },
+    resetOTP: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      comment: '6-digit OTP for password reset'
+    },
+    resetOTPExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Expiration time of the reset OTP'
     }
   },
   {
