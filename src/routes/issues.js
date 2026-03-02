@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import issueController from '../controllers/issueController.js';
+import statusController from '../controllers/statusController.js';
 
 const router = Router();
 
@@ -29,5 +30,14 @@ router.post('/:id/assign-third-party', issueController.assignThirdParty);
 
 // PUT /api/v1/issues/:id/status - Update issue status
 router.put('/:id/status', issueController.updateStatus);
+
+//
+// ✅ NEW: Status history endpoints
+//
+// GET /api/v1/issues/:id/statuses - Get all status updates for an issue
+router.get('/:id/statuses', statusController.getStatusesByIssue);
+
+// POST /api/v1/issues/:id/statuses - Create a new status update for an issue
+router.post('/:id/statuses', statusController.createStatusForIssue);
 
 export default router;

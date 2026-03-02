@@ -8,6 +8,7 @@ import Technician from './technician.js';
 import BranchManager from './branchManager.js';
 import MaintenanceExecutive from './maintenanceExecutive.js';
 import ThirdParty from './thirdParty.js';
+import Status from './status.js';
 
 const sequelize = getSequelizeInstance();
 
@@ -184,6 +185,33 @@ PettyCashRequest.belongsTo(Technician, {
   as: 'technician'
 });
 
+//
+// ✅ NEW: Status associations
+//
+Issue.hasMany(Status, {
+  foreignKey: 'issue_id',
+  as: 'statuses',
+  onDelete: 'CASCADE'
+});
+
+Status.belongsTo(Issue, {
+  foreignKey: 'issue_id',
+  as: 'issue',
+  onDelete: 'CASCADE'
+});
+
+User.hasMany(Status, {
+  foreignKey: 'user_id',
+  as: 'statuses',
+  onDelete: 'CASCADE'
+});
+
+Status.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+  onDelete: 'CASCADE'
+});
+
 // Initialize all models
 const models = {
   Issue,
@@ -195,8 +223,8 @@ const models = {
   BranchManager,
   MaintenanceExecutive,
   ThirdParty,
+  Status,
   sequelize
 };
-
 
 export default models;
