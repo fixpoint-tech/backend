@@ -5,31 +5,37 @@ class IssueController {
   // POST /api/issues - Create new issue
   async createIssue(req, res) {
     try {
-      const { 
-        branch_id, 
-        title, 
-        manager_id, 
-        description, 
-        maintenance_executive_id, 
-        technician_id, 
+      const {
+        branch_id,
+        title,
+        manager_id,
+        description,
+        maintenance_executive_id,
+        technician_id,
         status,
-        third_party_id 
+        third_party_id
       } = req.body;
 
       // Validation
-      if (!branch_id || !title || !manager_id) {
+      if (!branch_id || !title) {
         return res.status(400).json({
           success: false,
-          message: 'Branch ID, title, and manager ID are required'
+          message: 'Branch ID and title are required'
         });
       }
 
       const issueData = {
         branch_id: parseInt(branch_id),
         title,
-        manager_id: parseInt(manager_id),
         description
       };
+
+      // Include manager_id only if it is a valid non-zero integer
+      // When it's 0 or absent, issueService will auto-assign a branch manager
+      const parsedManagerId = manager_id ? parseInt(manager_id) : 0;
+      if (parsedManagerId > 0) {
+        issueData.manager_id = parsedManagerId;
+      }
 
       // Add optional fields if provided
       if (maintenance_executive_id) {
@@ -49,7 +55,7 @@ class IssueController {
 
       if (result.success) {
         // Notify all Maintenance Executives about the new issue(real-time)
-        try { notifyNewIssue(result); } catch (e) { console.error(e);}
+        try { notifyNewIssue(result); } catch (e) { console.error(e); }
 
         try {
           // Create dynamic namespaces for real-time communication
@@ -74,17 +80,17 @@ class IssueController {
   // GET /api/issues - Get all issues
   async getAllIssues(req, res) {
     try {
-      const { 
-        branch_id, 
-        manager_id, 
-        technician_id, 
+      const {
+        branch_id,
+        manager_id,
+        technician_id,
         maintenance_executive_id,
         third_party_id,
         status,
-        search, 
-        limit, 
+        search,
+        limit,
         offset,
-        include_relations 
+        include_relations
       } = req.query;
 
       const filters = {};
@@ -299,7 +305,7 @@ class IssueController {
         }
 
         // Notify all Maintenance Executives about the new issue(real-time) update with assigned ME
-        try { notifyNewIssue(result); } catch (e) { console.error(e);}
+        try { notifyNewIssue(result); } catch (e) { console.error(e); }
 
         return res.status(200).json(result);
       } else {
@@ -377,7 +383,7 @@ class IssueController {
         });
       }
 
-      const validStatuses = ['Open', 'In Progress', 'Done', 'Closed'];
+      const validStatuses = ['Open', 'In Progress', 'Pending Resolution', 'Pending Close', 'Done', 'Closed'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -396,10 +402,10 @@ class IssueController {
         }
 
         // Notify Maintenance Executives about the issue status update(real-time in home dashboard)
-        try { notifyNewIssue(result); } catch (e) { console.error(e);}
+        try { notifyNewIssue(result); } catch (e) { console.error(e); }
 
         // Notify assigned technician about the issue status update(real-time in home dashboard)
-        try { notifyAssign(result.data.technician_id, result); } catch (e) { console.error(e);}
+        try { notifyAssign(result.data.technician_id, result); } catch (e) { console.error(e); }
 
         // Remove all connections and delete the namespace for the issue
         if (result.data.status === 'Closed' || result.data.status === 'Done') {

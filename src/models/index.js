@@ -8,6 +8,8 @@ import Technician from './technician.js';
 import BranchManager from './branchManager.js';
 import MaintenanceExecutive from './maintenanceExecutive.js';
 import ThirdParty from './thirdParty.js';
+import Status from './status.js';
+import OutsidePartyRequest from './outsidePartyRequest.js';
 
 const sequelize = getSequelizeInstance();
 
@@ -172,6 +174,31 @@ Issue.belongsTo(ThirdParty, {
   as: 'thirdParty'
 });
 
+// Issue <-> Status (status update log)
+Issue.hasMany(Status, {
+  foreignKey: 'issue_id',
+  as: 'statuses',
+  onDelete: 'CASCADE'
+});
+
+Status.belongsTo(Issue, {
+  foreignKey: 'issue_id',
+  as: 'issue',
+  onDelete: 'CASCADE'
+});
+
+Status.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+  onDelete: 'CASCADE'
+});
+
+User.hasMany(Status, {
+  foreignKey: 'user_id',
+  as: 'statusUpdates',
+  onDelete: 'CASCADE'
+});
+
 // One-to-many relationship: Technician with PettyCashRequests
 Technician.hasMany(PettyCashRequest, {
   foreignKey: 'technician_id',
@@ -184,6 +211,29 @@ PettyCashRequest.belongsTo(Technician, {
   as: 'technician'
 });
 
+// One-to-many relationship: Issue with OutsidePartyRequests
+Issue.hasMany(OutsidePartyRequest, {
+  foreignKey: 'issue_id',
+  as: 'outsidePartyRequests',
+  onDelete: 'CASCADE'
+});
+
+OutsidePartyRequest.belongsTo(Issue, {
+  foreignKey: 'issue_id',
+  as: 'issue'
+});
+
+User.hasMany(OutsidePartyRequest, {
+  foreignKey: 'suggested_by',
+  as: 'outsidePartySuggestions',
+  onDelete: 'CASCADE'
+});
+
+OutsidePartyRequest.belongsTo(User, {
+  foreignKey: 'suggested_by',
+  as: 'suggester'
+});
+
 // Initialize all models
 const models = {
   Issue,
@@ -191,10 +241,12 @@ const models = {
   Branch,
   Message,
   PettyCashRequest,
+  OutsidePartyRequest,
   Technician,
   BranchManager,
   MaintenanceExecutive,
   ThirdParty,
+  Status,
   sequelize
 };
 
