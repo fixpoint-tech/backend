@@ -102,7 +102,7 @@ export const createCashRequest = async (req, res) => {
             });
         }
 
-        const { technician_id, issue_id, amount, description } = req.body;
+        const { technician_id, issue_id, amount, description } = parseCreateBody(req.body);
 
         const newCashRequest = await CashRequestService.createCashRequest({
             technician_id,
@@ -111,12 +111,12 @@ export const createCashRequest = async (req, res) => {
             description
         });
 
-        try {
-            // Notify via realtime update that a new cash request has been created for the issue
-            issueRealtimeUpdate(issue_id, newCashRequest);
-        } catch (err) {
-            console.error('issueRealtimeUpdate error after creating cash request:', err);
-        }
+        // try {
+        //     // Notify via realtime update that a new cash request has been created for the issue
+        //     issueRealtimeUpdate(issue_id, newCashRequest);
+        // } catch (err) {
+        //     console.error('issueRealtimeUpdate error after creating cash request:', err);
+        // }
 
         res.status(201).json({
             success: true,
@@ -132,6 +132,15 @@ export const createCashRequest = async (req, res) => {
         });
     }
 };
+
+// Ensure createCashRequest receives parsed numbers (express may pass strings from JSON)
+function parseCreateBody(body) {
+    const technician_id = body.technician_id != null ? parseInt(body.technician_id, 10) : undefined;
+    const issue_id = body.issue_id != null ? parseInt(body.issue_id, 10) : undefined;
+    const amount = body.amount != null ? parseFloat(body.amount) : undefined;
+    const description = typeof body.description === 'string' ? body.description.trim() : body.description;
+    return { technician_id, issue_id, amount, description };
+}
 
 /**
  * Update an existing cash request

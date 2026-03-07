@@ -29,6 +29,7 @@ app.use(cors({ origin: '*' }));
 app.use('/api/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/cash-requests', cashRequestRoutes);
+app.use('/api/v1/petty-cash-requests', cashRequestRoutes);
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/messages', messageRoutes);

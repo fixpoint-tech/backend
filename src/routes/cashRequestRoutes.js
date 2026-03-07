@@ -47,8 +47,8 @@ const createCashRequestValidation = [
         .notEmpty()
         .withMessage('description is required')
         .trim()
-        .isLength({ min: 10, max: 5000 })
-        .withMessage('description must be between 10 and 5000 characters')
+        .isLength({ min: 1, max: 5000 })
+        .withMessage('description must be between 1 and 5000 characters')
 ];
 
 const updateCashRequestValidation = [
@@ -59,8 +59,8 @@ const updateCashRequestValidation = [
     body('description')
         .optional()
         .trim()
-        .isLength({ min: 10, max: 5000 })
-        .withMessage('description must be between 10 and 5000 characters'),
+        .isLength({ min: 1, max: 5000 })
+        .withMessage('description must be between 1 and 5000 characters'),
     body('status')
         .optional()
         .isIn(['pending', 'approved', 'rejected'])
