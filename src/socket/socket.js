@@ -4,6 +4,9 @@ import messageService from '../services/messageService.js';
 import jwt from "jsonwebtoken";
 import Issue from '../models/issue.js';
 import { Op } from 'sequelize';
+import User from '../models/user.js';
+import * as CashRequestService from '../services/cashRequestService.js';
+import * as OutsidePartyRequestService from '../services/outsidePartyRequestService.js';
 
 let ioInstance = null;
 let newIssue = null;
@@ -110,7 +113,7 @@ export function notifyNewIssue(issue) {
 }
 
 //Emit an assigned_issue event to a specific technician in the /assign namespace.
-export function notifyAssign(id,issue) {
+export function notifyAssign(id, issue) {
     if (!assign) return;
     try {
         const room = `technician:${id}`;
@@ -164,6 +167,105 @@ export function makeDynamicNamespace(issueId) {
             }
         });
 
+        socket.on("petty_cash_request", async (data) => {
+            console.log("Petty cash request received:", data);
+            try {
+                const newRequest = await CashRequestService.createCashRequest({
+                    technician_id: data.technician_id,
+                    issue_id: data.issue_id,
+                    amount: data.amount,
+                    description: data.description,
+                });
+                // Emit once to the entire namespace (includes all users in this issue)
+                ioInstance.of(`/issue-${issueId}`).emit("issue_update", newRequest);
+            } catch (err) {
+                console.error('petty_cash_request error:', err);
+            }
+        });
+
+        socket.on("petty_cash_action", async (data) => {
+            console.log("Petty cash action received:", data);
+            try {
+                const uid = data.user_id || userId;
+                const user = await User.findByPk(uid);
+
+                if (data.action === 'cancel') {
+                    const existingRequest = await CashRequestService.getCashRequestById(data.request_id);
+                    if (!existingRequest) return;
+                    await CashRequestService.deleteCashRequest(data.request_id);
+                    // Emit fake update to mark rejected/cancelled locally 
+                    const pseudoUpdate = { ...existingRequest, status: 'rejected' };
+                    ioInstance.of(`/issue-${issueId}`).emit("issue_update", pseudoUpdate);
+                    return;
+                }
+
+                if (!user || !['branch_manager', 'maintenance_executive'].includes(user.role)) {
+                    console.error('PermissionDenied: Only managers can approve/reject petty cash.');
+                    return;
+                }
+
+                let result;
+                if (data.action === 'undo') {
+                    // Revert back to pending
+                    result = await CashRequestService.updateCashRequest(data.request_id, { status: 'pending' });
+                } else if (data.action === 'approve') {
+                    result = await CashRequestService.approveCashRequest(data.request_id);
+                } else if (data.action === 'reject') {
+                    result = await CashRequestService.rejectCashRequest(data.request_id);
+                }
+
+                if (result) {
+                    ioInstance.of(`/issue-${issueId}`).emit("issue_update", result);
+                }
+            } catch (err) {
+                console.error('petty_cash_action error:', err);
+            }
+        });
+
+        socket.on("outside_party_suggest", async (data) => {
+            console.log("Outside party suggestion received:", data);
+            try {
+                const record = await OutsidePartyRequestService.create({
+                    issue_id: data.issue_id,
+                    suggested_by: data.suggested_by || userId,
+                    vendor_name: data.vendor_name,
+                    description: data.description,
+                });
+                ioInstance.of(`/issue-${issueId}`).emit("outside_party_update", record);
+            } catch (err) {
+                console.error('outside_party_suggest error:', err);
+                socket.emit('socket_error', { message: err.message });
+            }
+        });
+
+        socket.on("outside_party_action", async (data) => {
+            console.log("Outside party action received:", data);
+            try {
+                const uid = data.user_id || userId;
+                const user = await User.findByPk(uid);
+
+                if (!user || !['branch_manager', 'maintenance_executive'].includes(user.role)) {
+                    console.error('PermissionDenied: Only managers can approve/reject outside party requests.');
+                    socket.emit('socket_error', { message: 'Permission denied' });
+                    return;
+                }
+
+                let result;
+                if (data.action === 'approve') {
+                    result = await OutsidePartyRequestService.approve(data.request_id, uid, data.comment || null);
+                } else if (data.action === 'reject') {
+                    result = await OutsidePartyRequestService.reject(data.request_id, uid, data.comment || null);
+                }
+
+                if (result) {
+                    ioInstance.of(`/issue-${issueId}`).emit("outside_party_update", result);
+                }
+            } catch (err) {
+                console.error('outside_party_action error:', err);
+                socket.emit('socket_error', { message: err.message });
+            }
+        });
+
         socket.on("disconnect", () => {
             console.log(`User disconnected: ${socket.id}`);
         });
@@ -174,34 +276,34 @@ export function makeDynamicNamespace(issueId) {
 
 export function removeDynamicNamespace(issueId) {
     if (!ioInstance) return;
-    
+
     try {
         const namespaceName = `/issue-${issueId}`;
         const namespace = ioInstance.of(namespaceName);
-        
+
         console.log(`Removing dynamic namespace: ${namespaceName}`);
 
         // Emit issue_update event before disconnecting
         namespace.emit('issue_update', { status: 'closed', message: 'The issue has been closed.' });
-        
+
         // Get all sockets in the namespace and disconnect them
         namespace.fetchSockets().then((sockets) => {
             sockets.forEach((socket) => {
                 console.log(`Disconnecting socket ${socket.id} from namespace ${namespaceName}`);
                 socket.disconnect(true);
             });
-            
+
             // Remove all listeners from the namespace
             namespace.removeAllListeners();
-            
+
             // Delete the namespace from the server
             ioInstance._nsps.delete(namespaceName);
-            
+
             console.log(`Dynamic namespace ${namespaceName} removed successfully`);
         }).catch((err) => {
             console.error(`Error removing namespace ${namespaceName}:`, err);
         });
-        
+
     } catch (err) {
         console.error('removeDynamicNamespace error:', err);
     }
@@ -215,5 +317,16 @@ export function issueRealtimeUpdate(issueId, issueData) {
         namespace.emit('issue_update', issueData);
     } catch (err) {
         console.error('issueRealtimeUpdate error:', err);
+    }
+}
+
+// Emit a status_update_log event to all clients connected to the /issue-<id> namespace.
+export function statusUpdateLogCreated(issueId, statusData) {
+    if (!ioInstance) return;
+    try {
+        const namespace = ioInstance.of(`/issue-${issueId}`);
+        namespace.emit('status_update_log', statusData);
+    } catch (err) {
+        console.error('statusUpdateLogCreated error:', err);
     }
 }

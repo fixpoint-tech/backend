@@ -13,6 +13,7 @@ import thirdPartiesRoutes from './src/routes/thirdparties.js';
 import cashRequestRoutes from './src/routes/cashRequestRoutes.js';
 import ahpRoutes from './src/routes/ahpRoutes.js';
 import authRoutes from './src/routes/auth.js';
+import outsidePartyRequestRoutes from './src/routes/outsidePartyRequests.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -28,12 +29,14 @@ app.use(cors({ origin: '*' }));
 app.use('/api/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/cash-requests', cashRequestRoutes);
+app.use('/api/v1/petty-cash-requests', cashRequestRoutes);
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/messages', messageRoutes);
 app.use('/api/v1/branches', branchRoutes);
 app.use('/api/v1/thirdparties', thirdPartiesRoutes);
 app.use('/api/v1/ahp', ahpRoutes);
+app.use('/api/v1/outside-party-requests', outsidePartyRequestRoutes);
 
 // Basic route
 app.get('/api/', (req, res) => {

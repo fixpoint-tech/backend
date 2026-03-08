@@ -53,11 +53,15 @@ export const createCashRequest = async (cashRequestData) => {
         }
 
         // Validate description is not empty
-        if (!description.trim()) {
-            throw new Error('Description cannot be empty');
+        const desc = typeof description === 'string' ? description.trim() : String(description ?? '');
+        if (!desc || desc.length > 5000) {
+            throw new Error('Description cannot be empty and must be at most 5000 characters');
         }
 
-        const newCashRequest = await PettyCashRequest.create(cashRequestData);
+        const newCashRequest = await PettyCashRequest.create({
+            ...cashRequestData,
+            description: desc
+        });
         return newCashRequest.toJSON();
     } catch (error) {
         throw new Error(`Service error in createCashRequest: ${error.message}`);

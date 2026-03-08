@@ -78,8 +78,8 @@ const PettyCashRequest = sequelize.define(
                     msg: 'Description cannot be empty'
                 },
                 len: {
-                    args: [10, 5000],
-                    msg: 'Description must be between 10 and 5000 characters'
+                    args: [1, 5000],
+                    msg: 'Description must be between 1 and 5000 characters'
                 }
             },
             comment: 'Detailed description of what the cash will be used for'

@@ -1,14 +1,15 @@
 import models from '../models/index.js';
 
-const { Issue, Branch, BranchManager, Technician, MaintenanceExecutive, ThirdParty, Message, PettyCashRequest, User } = models;
+const { Issue, Branch, BranchManager, Technician, MaintenanceExecutive, ThirdParty, Message, PettyCashRequest, User, Status } = models;
+import OutsidePartyRequest from '../models/outsidePartyRequest.js';
 import { Op } from 'sequelize';
 
 class IssueService {
   // Create a new issue
   async createIssue(issueData) {
     try {
-      const { manager_id, branch_id } = issueData;
-      
+      let { manager_id, branch_id } = issueData;
+
       // Validate branch exists
       const branch = await Branch.findByPk(branch_id);
       if (!branch) {
@@ -17,33 +18,52 @@ class IssueService {
           message: 'Invalid branch ID'
         };
       }
-      
-      // Validate branch manager exists
-      const branchManager = await BranchManager.findByPk(manager_id);
-      if (!branchManager) {
-        return {
-          success: false,
-          message: 'Invalid branch manager ID'
-        };
+
+      // If manager_id is not provided or is 0, auto-assign a branch manager
+      if (!manager_id) {
+        // Try to find a manager assigned to this specific branch first
+        let autoManager = await BranchManager.findOne({ where: { branchId: parseInt(branch_id) } });
+
+        // If no branch-specific manager found, pick any available branch manager
+        if (!autoManager) {
+          autoManager = await BranchManager.findOne();
+        }
+
+        if (!autoManager) {
+          return {
+            success: false,
+            message: 'No branch manager available to assign. Please contact support.'
+          };
+        }
+
+        manager_id = autoManager.id;
+        issueData = { ...issueData, manager_id };
+      } else {
+        // Validate provided branch manager exists
+        const branchManager = await BranchManager.findByPk(manager_id);
+        if (!branchManager) {
+          return {
+            success: false,
+            message: 'Invalid branch manager ID'
+          };
+        }
+
+        // Validate that branch manager is assigned to the specified branch
+        if (branchManager.branchId && branchManager.branchId !== parseInt(branch_id)) {
+          return {
+            success: false,
+            message: `Branch manager is assigned to branch ${branchManager.branchId}, but issue is for branch ${branch_id}`
+          };
+        }
+
+        if (!branchManager.branchId) {
+          console.warn(`Branch manager ${manager_id} has no assigned branch, but creating issue for branch ${branch_id}`);
+        }
       }
-      
-      // Validate that branch manager is assigned to the specified branch
-      if (branchManager.branchId && branchManager.branchId !== parseInt(branch_id)) {
-        return {
-          success: false,
-          message: `Branch manager is assigned to branch ${branchManager.branchId}, but issue is for branch ${branch_id}`
-        };
-      }
-      
-      // If branch manager has no assigned branch, that might be okay or might be an error
-      // depending on your business logic. For now, we'll allow it.
-      if (!branchManager.branchId) {
-        console.warn(`Branch manager ${manager_id} has no assigned branch, but creating issue for branch ${branch_id}`);
-      }
-      
+
       // Create the issue
       const issue = await Issue.create(issueData);
-      
+
       return {
         success: true,
         message: 'Issue created successfully',
@@ -63,32 +83,32 @@ class IssueService {
   async getAllIssues(filters = {}) {
     try {
       const where = {};
-      
+
       // Apply filters if provided
       if (filters.branch_id) {
         where.branch_id = filters.branch_id;
       }
-      
+
       if (filters.manager_id) {
         where.manager_id = filters.manager_id;
       }
-      
+
       if (filters.technician_id) {
         where.technician_id = filters.technician_id;
       }
-      
+
       if (filters.maintenance_executive_id) {
         where.maintenance_executive_id = filters.maintenance_executive_id;
       }
-      
+
       if (filters.third_party_id) {
         where.third_party_id = filters.third_party_id;
       }
-      
+
       if (filters.status) {
         where.status = filters.status;
       }
-      
+
       if (filters.search) {
         where[Op.or] = [
           { title: { [Op.iLike]: `%${filters.search}%` } },
@@ -172,7 +192,7 @@ class IssueService {
   async getIssueById(id, includeRelations = false) {
     try {
       const include = [];
-      
+
       if (includeRelations) {
         include.push(
           {
@@ -236,11 +256,26 @@ class IssueService {
             model: PettyCashRequest,
             as: 'pettyCashRequests',
             attributes: ['id', 'technician_id', 'amount', 'description', 'status', 'createdAt']
+          },
+          {
+            model: OutsidePartyRequest,
+            as: 'outsidePartyRequests',
+            attributes: ['id', 'issue_id', 'suggested_by', 'vendor_name', 'description', 'status', 'approved_by', 'approval_comment', 'createdAt']
+          },
+          {
+            model: Status,
+            as: 'statuses',
+            attributes: ['id', 'user_id', 'description', 'image_url', 'status_type', 'createdAt'],
+            include: [{
+              model: User,
+              as: 'user',
+              attributes: ['id', 'name', 'email', 'profilePicture']
+            }]
           }
         );
       }
 
-      const queryOptions = { 
+      const queryOptions = {
         include,
         order: []
       };
@@ -249,7 +284,9 @@ class IssueService {
       if (includeRelations) {
         queryOptions.order = [
           [{ model: Message, as: 'messages' }, 'createdAt', 'ASC'],
-          [{ model: PettyCashRequest, as: 'pettyCashRequests' }, 'createdAt', 'DESC']
+          [{ model: PettyCashRequest, as: 'pettyCashRequests' }, 'createdAt', 'DESC'],
+          [{ model: OutsidePartyRequest, as: 'outsidePartyRequests' }, 'createdAt', 'DESC'],
+          [{ model: Status, as: 'statuses' }, 'createdAt', 'ASC']
         ];
       }
 
@@ -290,35 +327,12 @@ class IssueService {
 
       await issue.update(updateData);
 
-      // Fetch updated issue with relations
-      const updatedIssue = await Issue.findByPk(id, {
-        include: [
-          {
-            model: Branch,
-            as: 'branch',
-            attributes: ['id', 'name', 'location']
-          },
-          {
-            model: BranchManager,
-            as: 'manager',
-            attributes: ['id'],
-            include: [{
-              model: models.User,
-              as: 'user',
-              attributes: ['id', 'name', 'email']
-            }]
-          },
-          {
-            model: ThirdParty,
-            as: 'thirdParty',
-            attributes: ['id', 'organization', 'email']
-          }
-        ]
-      });
+      // Fetch full updated issue to return to the client
+      const updatedIssueResult = await this.getIssueById(id, true);
 
       return {
         success: true,
-        data: updatedIssue,
+        data: updatedIssueResult.data,
         message: 'Issue updated successfully'
       };
     } catch (error) {
@@ -378,29 +392,17 @@ class IssueService {
         };
       }
 
-      await issue.update({ 
+      await issue.update({
         technician_id: technicianId,
         technician_assigned_at: new Date()
       });
 
-      // Fetch updated issue with technician info and assignment timestamp
-      const updatedIssue = await Issue.findByPk(issueId, {
-        attributes: ['id', 'title', 'description', 'status', 'technician_id', 'technician_assigned_at', 'updatedAt'],
-        include: [{
-          model: Technician,
-          as: 'technician',
-          attributes: ['id', 'specialization', 'createdAt', 'updatedAt'],
-          include: [{
-            model: models.User,
-            as: 'user',
-            attributes: ['id', 'name', 'email', 'createdAt']
-          }]
-        }]
-      });
+      // Fetch full updated issue to return to the client
+      const updatedIssueResult = await this.getIssueById(issueId, true);
 
       return {
         success: true,
-        data: updatedIssue,
+        data: updatedIssueResult.data,
         message: 'Technician assigned successfully'
       };
     } catch (error) {
@@ -433,29 +435,17 @@ class IssueService {
         };
       }
 
-      await issue.update({ 
+      await issue.update({
         maintenance_executive_id: executiveId,
         maintenance_executive_assigned_at: new Date()
       });
 
-      // Fetch updated issue with executive info and assignment timestamp
-      const updatedIssue = await Issue.findByPk(issueId, {
-        attributes: ['id', 'title', 'description', 'status', 'maintenance_executive_id', 'maintenance_executive_assigned_at', 'updatedAt'],
-        include: [{
-          model: MaintenanceExecutive,
-          as: 'maintenanceExecutive',
-          attributes: ['id', 'createdAt', 'updatedAt'],
-          include: [{
-            model: models.User,
-            as: 'user',
-            attributes: ['id', 'name', 'email', 'createdAt']
-          }]
-        }]
-      });
+      // Fetch full updated issue to return to the client
+      const updatedIssueResult = await this.getIssueById(issueId, true);
 
       return {
         success: true,
-        data: updatedIssue,
+        data: updatedIssueResult.data,
         message: 'Maintenance Executive assigned successfully'
       };
     } catch (error) {
@@ -488,24 +478,17 @@ class IssueService {
         };
       }
 
-      await issue.update({ 
+      await issue.update({
         third_party_id: thirdPartyId,
         third_party_assigned_at: new Date()
       });
 
-      // Fetch updated issue with third party info and assignment timestamp
-      const updatedIssue = await Issue.findByPk(issueId, {
-        attributes: ['id', 'title', 'description', 'status', 'third_party_id', 'third_party_assigned_at', 'updatedAt'],
-        include: [{
-          model: ThirdParty,
-          as: 'thirdParty',
-          attributes: ['id', 'organization', 'email', 'worktype', 'createdAt', 'updatedAt']
-        }]
-      });
+      // Fetch full updated issue to return to the client
+      const updatedIssueResult = await this.getIssueById(issueId, true);
 
       return {
         success: true,
-        data: updatedIssue,
+        data: updatedIssueResult.data,
         message: 'Third Party assigned successfully'
       };
     } catch (error) {
@@ -531,9 +514,12 @@ class IssueService {
 
       await issue.update({ status });
 
+      // Fetch full updated issue to return to the client
+      const updatedIssueResult = await this.getIssueById(id, true);
+
       return {
         success: true,
-        data: issue,
+        data: updatedIssueResult.data,
         message: 'Issue status updated successfully'
       };
     } catch (error) {

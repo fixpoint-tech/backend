@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import issueController from '../controllers/issueController.js';
+import statusController from '../controllers/statusController.js';
 
 const router = Router();
 
@@ -29,5 +30,11 @@ router.post('/:id/assign-third-party', issueController.assignThirdParty);
 
 // PUT /api/v1/issues/:id/status - Update issue status
 router.put('/:id/status', issueController.updateStatus);
+
+// GET /api/v1/issues/:id/statuses - Get all status update logs for an issue
+router.get('/:id/statuses', statusController.getStatusUpdates);
+
+// POST /api/v1/issues/:id/statuses - Add a status update log entry
+router.post('/:id/statuses', statusController.createStatusUpdate);
 
 export default router;
