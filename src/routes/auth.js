@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import userService from "../services/userService.js";
 import { authenticateToken } from "../middleware/auth.js";
+import emailService from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -300,45 +301,54 @@ router.post("/forgot-password", async (req, res) => {
     // Find user by email
     const user = await userService.getUserByEmail(email);
 
-    // Don't reveal if user exists or not (security best practice)
-    if (!user) {
-      return res.status(200).json({
-        success: true,
-        message:
-          "If an account exists with this email, a password reset link has been sent.",
-      });
+        // Don't reveal if user exists or not (security best practice)
+        if (!user) {
+            // Fake success for security (prevents user enumeration)
+            return res.status(200).json({
+                success: true,
+                message: 'If an account exists with this email, a password reset code has been sent.'
+            });
+        }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Expiry: 15 minutes from now
+        const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+        // Save OTP to database
+        await userService.updateUser(user.id, {
+            resetOTP: otp,
+            resetOTPExpiry: otpExpiry
+        });
+
+        // Send Email
+        try {
+            await emailService.sendPasswordResetEmail(user.email, otp, user.name);
+        } catch (emailError) {
+            console.error('Failed to send email:', emailError);
+            // In a real scenario, you might want to rollback the DB change or return an error,
+            // but for security "blind" responses, we might still return success or a generic error.
+            // Here we return 500 because if email fails, user can't reset.
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to send verification email. Please try again.'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            // SECURITY: Do NOT return the OTP in the response
+            message: 'If an account exists with this email, a password reset code has been sent.'
+        });
+
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process password reset request'
+        });
     }
-
-    // Generate a password reset token (valid for 1 hour)
-    const resetToken = jwt.sign(
-      { id: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "1h" },
-    );
-
-    // In a production app, you would:
-    // 1. Save this token to the database with an expiry time
-    // 2. Send an email with a reset link containing the token
-    // For now, we'll return the token directly (for demo purposes)
-
-    // TODO: Send email with reset link
-    // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    // await sendEmail(user.email, 'Password Reset', resetLink);
-
-    res.status(200).json({
-      success: true,
-      message:
-        "If an account exists with this email, a password reset link has been sent.",
-      // For demo: return token (remove in production!)
-      resetToken: resetToken,
-    });
-  } catch (error) {
-    console.error("Forgot password error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to process password reset request",
-    });
-  }
 });
 
 /**
@@ -346,52 +356,62 @@ router.post("/forgot-password", async (req, res) => {
  * @desc    Reset password using reset token
  * @access  Public
  */
-router.post("/reset-password", async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
-
-    // Validate input
-    if (!token || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Token and new password are required",
-      });
-    }
-
-    // Validate password length
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters long",
-      });
-    }
-
-    // Verify the reset token
-    let decoded;
+router.post('/reset-password', async (req, res) => {
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired reset token",
-      });
-    }
+        const { email, otp, newPassword } = req.body;
 
-    // Find the user
-    const user = await userService.getUserById(decoded.id);
+        // Validate input
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email, OTP, and new password are required'
+            });
+        }
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+        // Validate password length
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Find the user
+        const user = await userService.getUserByEmail(email);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Verify OTP logic
+        // 1. Check if OTP matches
+        if (!user.resetOTP || user.resetOTP !== otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid OTP code'
+            });
+        }
+
+        // 2. Check expiry
+        if (!user.resetOTPExpiry || new Date() > new Date(user.resetOTPExpiry)) {
+            return res.status(400).json({
+                success: false,
+                message: 'OTP code has expired'
+            });
+        }
 
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update the user's password
-    await userService.updateUser(decoded.id, { password: hashedPassword }, {});
+        // Update the user's password and clear OTP
+        await userService.updateUser(user.id, {
+            password: hashedPassword,
+            resetOTP: null,
+            resetOTPExpiry: null
+        });
 
     res.status(200).json({
       success: true,

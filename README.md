@@ -67,6 +67,25 @@ npm run dev
 
 The server default route is: `http://localhost:5000/api/`.
 
+## Database Setup & Seeding
+
+If you are running the project for the first time or need to reset your database, follow these steps:
+
+1. **Run Migrations**: Create the necessary tables in the database.
+   ```bash
+   npm run db:migrate
+   ```
+
+2. **Seed Data**: Populate the database with demo users and branches.
+   ```bash
+   npm run db:seed
+   ```
+
+**To reset the entire database (Undo all migrations, remigrate, and re-seed):**
+```bash
+npm run db:reset
+```
+
 ## Health endpoints
 
 The project exposes health endpoints mounted under `/api/health`:

@@ -9,8 +9,9 @@ const {
   ThirdParty,
   Message,
   PettyCashRequest,
-  User,
+  User, Status,
 } = models;
+import OutsidePartyRequest from '../models/outsidePartyRequest.js';
 import { Op } from "sequelize";
 
 class IssueService {
@@ -283,6 +284,21 @@ class IssueService {
               "createdAt",
             ],
           },
+          {
+            model: OutsidePartyRequest,
+            as: 'outsidePartyRequests',
+            attributes: ['id', 'issue_id', 'suggested_by', 'vendor_name', 'description', 'status', 'approved_by', 'approval_comment', 'createdAt']
+          },
+          {
+            model: Status,
+            as: 'statuses',
+            attributes: ['id', 'user_id', 'description', 'image_url', 'status_type', 'createdAt'],
+            include: [{
+              model: User,
+              as: 'user',
+              attributes: ['id', 'name', 'email', 'profilePicture']
+            }]
+          },
         );
       }
 
@@ -294,12 +310,10 @@ class IssueService {
       // Add ordering for nested associations when including relations
       if (includeRelations) {
         queryOptions.order = [
-          [{ model: Message, as: "messages" }, "createdAt", "ASC"],
-          [
-            { model: PettyCashRequest, as: "pettyCashRequests" },
-            "createdAt",
-            "DESC",
-          ],
+          [{ model: Message, as: 'messages' }, 'createdAt', 'ASC'],
+          [{ model: PettyCashRequest, as: 'pettyCashRequests' }, 'createdAt', 'DESC'],
+          [{ model: OutsidePartyRequest, as: 'outsidePartyRequests' }, 'createdAt', 'DESC'],
+          [{ model: Status, as: 'statuses' }, 'createdAt', 'ASC']
         ];
       }
 
@@ -623,6 +637,9 @@ class IssueService {
       }
 
       await issue.update({ status });
+
+      // Fetch full updated issue to return to the client
+      const updatedIssueResult = await this.getIssueById(id, true);
 
       return {
         success: true,

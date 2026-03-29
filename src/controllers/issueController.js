@@ -23,7 +23,7 @@ class IssueController {
       } = req.body;
 
       // Validation
-      if (!branch_id || !title || !manager_id) {
+      if (!branch_id || !title) {
         return res.status(400).json({
           success: false,
           message: "Branch ID, title, and manager ID are required",
@@ -36,6 +36,13 @@ class IssueController {
         manager_id: parseInt(manager_id),
         description,
       };
+
+      // Include manager_id only if it is a valid non-zero integer
+      // When it's 0 or absent, issueService will auto-assign a branch manager
+      const parsedManagerId = manager_id ? parseInt(manager_id) : 0;
+      if (parsedManagerId > 0) {
+        issueData.manager_id = parsedManagerId;
+      }
 
       // Add optional fields if provided
       if (maintenance_executive_id) {

@@ -99,13 +99,13 @@ const Issue = sequelize.define('Issue', {
     }
   },
   status: {
-    type: DataTypes.ENUM('Open', 'In Progress', 'Done', 'Closed'),
+    type: DataTypes.ENUM('Open', 'In Progress', 'Pending Resolution', 'Pending Close', 'Done', 'Closed'),
     allowNull: false,
     defaultValue: 'Open',
     validate: {
       isIn: {
-        args: [['Open', 'In Progress', 'Done', 'Closed']],
-        msg: 'Status must be one of: Open, In Progress, Done, Closed'
+        args: [['Open', 'In Progress', 'Pending Resolution', 'Pending Close', 'Done', 'Closed']],
+        msg: 'Status must be one of: Open, In Progress, Pending Resolution, Pending Close, Done, Closed'
       }
     }
   },
@@ -137,29 +137,29 @@ const Issue = sequelize.define('Issue', {
     allowNull: true
   }
 },
-{
-  tableName: 'Issues',
-  timestamps: true, // This will automatically add createdAt and updatedAt
-  indexes: [
-    {
-      fields: ['branch_id']
-    },
-    {
-      fields: ['manager_id']
-    },
-    {
-      fields: ['maintenance_executive_id']
-    },
-    {
-      fields: ['technician_id']
-    },
-    {
-      fields: ['status']
-    },
-    {
-      fields: ['third_party_id']
-    }
-  ]
-});
+  {
+    tableName: 'Issues',
+    timestamps: true, // This will automatically add createdAt and updatedAt
+    indexes: [
+      {
+        fields: ['branch_id']
+      },
+      {
+        fields: ['manager_id']
+      },
+      {
+        fields: ['maintenance_executive_id']
+      },
+      {
+        fields: ['technician_id']
+      },
+      {
+        fields: ['status']
+      },
+      {
+        fields: ['third_party_id']
+      }
+    ]
+  });
 
 export default Issue;
