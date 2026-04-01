@@ -1,4 +1,5 @@
 import models from '../models/index.js';
+import branchService from './branchService.js';
 
 const { User, Technician, BranchManager, MaintenanceExecutive } = models;
 import { getSequelizeInstance } from './connectionService.js';
@@ -264,13 +265,57 @@ class UserService {
     return { message: 'User deleted successfully' };
   }
 
+  // /**
+  //  * Get users by role with profiles
+  //  * @param {string} role - User role
+  //  * @returns {Promise<Array>} List of users with profiles
+  //  */
+  // async getUsersByRole(role) {
+  //   return this.getAllUsers(role);
+  // }
+
   /**
-   * Get users by role with profiles
+   * Get users by role with ONLY their specific profile
+   * If branch_manager, manually attaches branch data using BranchService
    * @param {string} role - User role
-   * @returns {Promise<Array>} List of users with profiles
+   * @returns {Promise<Array>} List of users
    */
   async getUsersByRole(role) {
-    return this.getAllUsers(role);
+    const include = [];
+
+    if (role === 'technician') {
+      include.push({ model: Technician, as: 'technicianProfile' });
+    } else if (role === 'branch_manager') {
+      include.push({ model: BranchManager, as: 'branchManagerProfile' });
+    } else if (role === 'maintenance_executive') {
+      include.push({ model: MaintenanceExecutive, as: 'maintenanceExecutiveProfile' });
+    }
+
+    const users = await User.findAll({
+      where: { role, isActive: true },
+      attributes: { exclude: ['password'] },
+      include,
+      order: [['createdAt', 'DESC']]
+    });
+
+    // If role is branch_manager, iterate and fetch branch details manually
+    if (role === 'branch_manager') {
+      const usersWithBranch = await Promise.all(users.map(async (user) => {
+        const userJson = user.toJSON();
+        const branchId = userJson.branchManagerProfile?.branchId;
+
+        if (branchId) {
+          const branchResult = await branchService.getBranchById(branchId);
+          if (branchResult.success) {
+            userJson.Branch = branchResult.data; // Attaching branch data
+          }
+        }
+        return userJson;
+      }));
+      return usersWithBranch;
+    }
+
+    return users;
   }
 }
 
