@@ -1,5 +1,11 @@
-import issueService from '../services/issueService.js';
-import { notifyNewIssue, notifyAssign, makeDynamicNamespace, issueRealtimeUpdate, removeDynamicNamespace } from '../socket/socket.js';
+import issueService from "../services/issueService.js";
+import {
+  notifyNewIssue,
+  notifyAssign,
+  makeDynamicNamespace,
+  issueRealtimeUpdate,
+  removeDynamicNamespace,
+} from "../socket/socket.js";
 
 class IssueController {
   // POST /api/issues - Create new issue
@@ -13,21 +19,22 @@ class IssueController {
         maintenance_executive_id,
         technician_id,
         status,
-        third_party_id
+        third_party_id,
       } = req.body;
 
       // Validation
       if (!branch_id || !title) {
         return res.status(400).json({
           success: false,
-          message: 'Branch ID and title are required'
+          message: "Branch ID, title, and manager ID are required",
         });
       }
 
       const issueData = {
         branch_id: parseInt(branch_id),
         title,
-        description
+        manager_id: parseInt(manager_id),
+        description,
       };
 
       // Include manager_id only if it is a valid non-zero integer
@@ -55,13 +62,17 @@ class IssueController {
 
       if (result.success) {
         // Notify all Maintenance Executives about the new issue(real-time)
-        try { notifyNewIssue(result); } catch (e) { console.error(e); }
+        try {
+          notifyNewIssue(result);
+        } catch (e) {
+          console.error(e);
+        }
 
         try {
           // Create dynamic namespaces for real-time communication
           makeDynamicNamespace(result.data.id);
         } catch (nsErr) {
-          console.error('makeDynamicNamespace failed:', nsErr);
+          console.error("makeDynamicNamespace failed:", nsErr);
         }
 
         return res.status(201).json(result);
@@ -71,8 +82,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -90,20 +101,42 @@ class IssueController {
         search,
         limit,
         offset,
-        include_relations
+        include_relations,
       } = req.query;
 
       const filters = {};
       if (branch_id) filters.branch_id = parseInt(branch_id);
       if (manager_id) filters.manager_id = parseInt(manager_id);
       if (technician_id) filters.technician_id = parseInt(technician_id);
-      if (maintenance_executive_id) filters.maintenance_executive_id = parseInt(maintenance_executive_id);
+      if (maintenance_executive_id)
+        filters.maintenance_executive_id = parseInt(maintenance_executive_id);
       if (third_party_id) filters.third_party_id = parseInt(third_party_id);
       if (status) filters.status = status;
       if (search) filters.search = search;
       if (limit) filters.limit = parseInt(limit);
       if (offset) filters.offset = parseInt(offset);
-      if (include_relations) filters.include_relations = include_relations === 'true';
+      if (include_relations)
+        filters.include_relations = include_relations === "true";
+
+      // Strict Role-Based Access Control Filtering
+      const { role, roleSpecificId } = req.user;
+
+      if (role === "maintenance_executive") {
+        // Maintenance Executives can view all issues by default.
+        // They can still use query filters if they want to narrow down results.
+      } else if (role === "technician") {
+        // Strictly restricted to issues assigned to them
+        filters.technician_id = roleSpecificId;
+      } else if (role === "branch_manager") {
+        // Strictly restricted to issues they created/manage
+        filters.manager_id = roleSpecificId;
+      } else {
+        // Safety: If an unknown role somehow accesses this, return empty results or error
+        return res.status(403).json({
+          success: false,
+          message: "Access denied: Unauthorized role",
+        });
+      }
 
       const result = await issueService.getAllIssues(filters);
 
@@ -115,8 +148,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -130,22 +163,56 @@ class IssueController {
       if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Valid issue ID is required'
+          message: "Valid issue ID is required",
         });
       }
 
-      const result = await issueService.getIssueById(parseInt(id), include_relations === 'true');
+      const result = await issueService.getIssueById(
+        parseInt(id),
+        include_relations === "true",
+      );
 
-      if (result.success) {
+      if (result.success && result.data) {
+        // Authorization check
+        const { role, roleSpecificId } = req.user;
+        const issue = result.data;
+
+        // Strict Check
+        if (role === "maintenance_executive") {
+          // Allowed: See all
+        } else if (role === "technician") {
+          if (issue.technician_id !== roleSpecificId) {
+            return res.status(403).json({
+              success: false,
+              message: "Access denied: You are not assigned to this issue",
+            });
+          }
+        } else if (role === "branch_manager") {
+          if (issue.manager_id !== roleSpecificId) {
+            return res.status(403).json({
+              success: false,
+              message:
+                "Access denied: This issue does not belong to your branch",
+            });
+          }
+        } else {
+          return res.status(403).json({
+            success: false,
+            message: "Access denied: Unauthorized role",
+          });
+        }
+
         return res.status(200).json(result);
-      } else {
+      } else if (result.success && !result.data) {
         return res.status(404).json(result);
+      } else {
+        return res.status(500).json(result);
       }
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -159,12 +226,18 @@ class IssueController {
       if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Valid issue ID is required'
+          message: "Valid issue ID is required",
         });
       }
 
       // Convert string IDs to integers if provided
-      ['branch_id', 'manager_id', 'technician_id', 'maintenance_executive_id', 'third_party_id'].forEach(field => {
+      [
+        "branch_id",
+        "manager_id",
+        "technician_id",
+        "maintenance_executive_id",
+        "third_party_id",
+      ].forEach((field) => {
         if (updateData[field]) {
           updateData[field] = parseInt(updateData[field]);
         }
@@ -176,9 +249,8 @@ class IssueController {
         // Notify via realtime update that the issue has been updated
         issueRealtimeUpdate(result.data.id, result);
       } catch (err) {
-        console.error('issueRealtimeUpdate error after updating issue:', err);
+        console.error("issueRealtimeUpdate error after updating issue:", err);
       }
-
 
       if (result.success) {
         return res.status(200).json(result);
@@ -188,8 +260,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -202,7 +274,7 @@ class IssueController {
       if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Valid issue ID is required'
+          message: "Valid issue ID is required",
         });
       }
 
@@ -218,8 +290,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -233,32 +305,35 @@ class IssueController {
       if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Valid issue ID is required'
+          message: "Valid issue ID is required",
         });
       }
 
       if (!technician_id) {
         return res.status(400).json({
           success: false,
-          message: 'Technician ID is required'
+          message: "Technician ID is required",
         });
       }
 
-      const result = await issueService.assignTechnician(parseInt(id), parseInt(technician_id));
+      const result = await issueService.assignTechnician(
+        parseInt(id),
+        parseInt(technician_id),
+      );
 
       if (result.success) {
         // Notify via realtime update that the technician has been assigned
         try {
           issueRealtimeUpdate(parseInt(id), result);
         } catch (emitErr) {
-          console.error('issueRealtimeUpdate failed:', emitErr);
+          console.error("issueRealtimeUpdate failed:", emitErr);
         }
 
         // broadcast assignment to the assigned technician (real-time)
         try {
           notifyAssign(parseInt(technician_id), result);
         } catch (emitErr) {
-          console.error('notifyAssign failed:', emitErr);
+          console.error("notifyAssign failed:", emitErr);
         }
 
         return res.status(200).json(result);
@@ -268,8 +343,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -283,29 +358,36 @@ class IssueController {
       if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Valid issue ID is required'
+          message: "Valid issue ID is required",
         });
       }
 
       if (!maintenance_executive_id) {
         return res.status(400).json({
           success: false,
-          message: 'Maintenance Executive ID is required'
+          message: "Maintenance Executive ID is required",
         });
       }
 
-      const result = await issueService.assignMaintenanceExecutive(parseInt(id), parseInt(maintenance_executive_id));
+      const result = await issueService.assignMaintenanceExecutive(
+        parseInt(id),
+        parseInt(maintenance_executive_id),
+      );
 
       if (result.success) {
         // Notify via realtime update that the maintenance executive has been assigned
         try {
           issueRealtimeUpdate(parseInt(id), result);
         } catch (emitErr) {
-          console.error('issueRealtimeUpdate failed:', emitErr);
+          console.error("issueRealtimeUpdate failed:", emitErr);
         }
 
         // Notify all Maintenance Executives about the new issue(real-time) update with assigned ME
-        try { notifyNewIssue(result); } catch (e) { console.error(e); }
+        try {
+          notifyNewIssue(result);
+        } catch (e) {
+          console.error(e);
+        }
 
         return res.status(200).json(result);
       } else {
@@ -314,8 +396,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -329,25 +411,28 @@ class IssueController {
       if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Valid issue ID is required'
+          message: "Valid issue ID is required",
         });
       }
 
       if (!third_party_id) {
         return res.status(400).json({
           success: false,
-          message: 'Third Party ID is required'
+          message: "Third Party ID is required",
         });
       }
 
-      const result = await issueService.assignThirdParty(parseInt(id), parseInt(third_party_id));
+      const result = await issueService.assignThirdParty(
+        parseInt(id),
+        parseInt(third_party_id),
+      );
 
       if (result.success) {
         // Notify via realtime update that the third party has been assigned
         try {
           issueRealtimeUpdate(parseInt(id), result);
         } catch (emitErr) {
-          console.error('issueRealtimeUpdate failed:', emitErr);
+          console.error("issueRealtimeUpdate failed:", emitErr);
         }
 
         return res.status(200).json(result);
@@ -357,8 +442,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
@@ -372,22 +457,22 @@ class IssueController {
       if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Valid issue ID is required'
+          message: "Valid issue ID is required",
         });
       }
 
       if (!status) {
         return res.status(400).json({
           success: false,
-          message: 'Status is required'
+          message: "Status is required",
         });
       }
 
-      const validStatuses = ['Open', 'In Progress', 'Pending Resolution', 'Pending Close', 'Done', 'Closed'];
+      const validStatuses = ["Open", "In Progress", "Done", "Closed"];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
-          message: `Status must be one of: ${validStatuses.join(', ')}`
+          message: `Status must be one of: ${validStatuses.join(", ")}`,
         });
       }
 
@@ -398,17 +483,25 @@ class IssueController {
         try {
           issueRealtimeUpdate(parseInt(id), result);
         } catch (emitErr) {
-          console.error('issueRealtimeUpdate failed:', emitErr);
+          console.error("issueRealtimeUpdate failed:", emitErr);
         }
 
         // Notify Maintenance Executives about the issue status update(real-time in home dashboard)
-        try { notifyNewIssue(result); } catch (e) { console.error(e); }
+        try {
+          notifyNewIssue(result);
+        } catch (e) {
+          console.error(e);
+        }
 
         // Notify assigned technician about the issue status update(real-time in home dashboard)
-        try { notifyAssign(result.data.technician_id, result); } catch (e) { console.error(e); }
+        try {
+          notifyAssign(result.data.technician_id, result);
+        } catch (e) {
+          console.error(e);
+        }
 
         // Remove all connections and delete the namespace for the issue
-        if (result.data.status === 'Closed' || result.data.status === 'Done') {
+        if (result.data.status === "Closed" || result.data.status === "Done") {
           removeDynamicNamespace(result.data.id);
         }
 
@@ -419,8 +512,8 @@ class IssueController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: "Internal server error",
+        error: error.message,
       });
     }
   }
